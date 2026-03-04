@@ -1,19 +1,49 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
-  ChevronDown,
-  ChevronUp,
+  ArrowRight,
   LogOut,
   Package,
   RefreshCw,
   Store,
   Truck,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import { useState } from "react";
 import { useActor } from "../hooks/useActor";
 import type { Order } from "../store/types";
 import { useAdminStore } from "../store/useStore";
+
+type OrderStatus = "new" | "preparing" | "ready" | "completed";
+
+const STATUS_COLUMNS: {
+  key: OrderStatus;
+  label: string;
+  color: string;
+  bg: string;
+}[] = [
+  { key: "new", label: "NEW", color: "#60a5fa", bg: "rgba(59,130,246,0.1)" },
+  {
+    key: "preparing",
+    label: "PREPARING",
+    color: "#fbbf24",
+    bg: "rgba(251,191,36,0.1)",
+  },
+  {
+    key: "ready",
+    label: "READY",
+    color: "#34d399",
+    bg: "rgba(52,211,153,0.1)",
+  },
+  {
+    key: "completed",
+    label: "COMPLETED",
+    color: "#a0967a",
+    bg: "rgba(160,150,122,0.1)",
+  },
+];
+
+const STATUS_ORDER: OrderStatus[] = ["new", "preparing", "ready", "completed"];
 
 function formatDate(ts: number) {
   return new Date(ts).toLocaleString("lv-LV", {
@@ -25,195 +55,102 @@ function formatDate(ts: number) {
   });
 }
 
-function OrderRow({ order, index }: { order: Order; index: number }) {
-  const [expanded, setExpanded] = useState(false);
+function formatItems(items: Order["items"]): string {
+  return items.map((i) => `${i.name} ×${i.quantity}`).join(", ");
+}
+
+interface OrderCardProps {
+  order: Order;
+  cardIndex: number;
+  status: OrderStatus;
+  onAdvance: (orderNumber: number) => void;
+}
+
+function OrderCard({ order, cardIndex, status, onAdvance }: OrderCardProps) {
+  const isCompleted = status === "completed";
+  const colConfig = STATUS_COLUMNS.find((c) => c.key === status);
 
   return (
-    <div
-      data-ocid={`admin.order_row.${index + 1}`}
-      className="rounded-xl overflow-hidden mb-3"
-      style={{ border: "1px solid #3a2e28" }}
+    <motion.div
+      data-ocid={`admin.order_card.${cardIndex}`}
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.2 }}
+      className="rounded-xl p-4 mb-3"
+      style={{
+        background: "#1e1612",
+        border: "1px solid #3a2e28",
+      }}
     >
-      {/* Row header */}
-      <button
-        type="button"
-        className="w-full flex items-center justify-between px-5 py-4 text-left transition-colors hover:bg-[#241b17]"
-        style={{ background: expanded ? "#241b17" : "#1e1612" }}
-        onClick={() => setExpanded((v) => !v)}
-      >
-        <div className="flex items-center gap-4 flex-wrap">
-          <span
-            className="font-display text-sm font-bold"
-            style={{ color: "#d4af37" }}
-          >
-            #{order.orderNumber}
-          </span>
-          <span className="text-sm" style={{ color: "#f5f5f5" }}>
-            {order.phone}
-          </span>
-          {order.customerName && (
-            <span className="text-sm" style={{ color: "#a0967a" }}>
-              {order.customerName}
+      {/* Header row */}
+      <div className="flex items-center justify-between mb-3">
+        <span
+          className="font-display text-base font-bold"
+          style={{ color: "#d4af37" }}
+        >
+          #{order.orderNumber}
+        </span>
+        <span
+          className="text-xs px-2 py-0.5 rounded-full font-medium"
+          style={{
+            background: colConfig?.bg,
+            color: colConfig?.color,
+          }}
+        >
+          {order.deliveryType === "delivery" ? (
+            <span className="flex items-center gap-1">
+              <Truck size={10} /> Delivery
+            </span>
+          ) : (
+            <span className="flex items-center gap-1">
+              <Store size={10} /> Pickup
             </span>
           )}
-          <span
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
-            style={{
-              background:
-                order.deliveryType === "delivery"
-                  ? "rgba(59,130,246,0.12)"
-                  : "rgba(212,175,55,0.12)",
-              color: order.deliveryType === "delivery" ? "#60a5fa" : "#d4af37",
-            }}
-          >
-            {order.deliveryType === "delivery" ? (
-              <Truck size={11} />
-            ) : (
-              <Store size={11} />
-            )}
-            {order.deliveryType === "delivery" ? "Delivery" : "Pickup"}
-          </span>
-        </div>
+        </span>
+      </div>
 
-        <div className="flex items-center gap-4">
-          <span
-            className="font-display font-bold text-sm hidden sm:block"
+      {/* Phone */}
+      <p className="text-sm font-medium mb-1" style={{ color: "#f5f5f5" }}>
+        {order.phone}
+      </p>
+
+      {/* Items summary */}
+      <p className="text-xs mb-3 line-clamp-2" style={{ color: "#a0967a" }}>
+        {formatItems(order.items)}
+      </p>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p
+            className="font-display text-sm font-bold"
             style={{ color: "#d4af37" }}
           >
             {order.totalPrice % 1 === 0
               ? order.totalPrice
               : order.totalPrice.toFixed(2)}{" "}
             €
-          </span>
-          <span
-            className="text-xs hidden md:block"
-            style={{ color: "#7a6e5a" }}
-          >
+          </p>
+          <p className="text-xs" style={{ color: "#7a6e5a" }}>
             {formatDate(order.createdAt)}
-          </span>
-          {expanded ? (
-            <ChevronUp size={16} style={{ color: "#7a6e5a" }} />
-          ) : (
-            <ChevronDown size={16} style={{ color: "#7a6e5a" }} />
-          )}
+          </p>
         </div>
-      </button>
-
-      {/* Expanded content */}
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
+        {!isCompleted && (
+          <button
+            type="button"
+            data-ocid={`admin.order_advance_button.${cardIndex}`}
+            onClick={() => onAdvance(order.orderNumber)}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:brightness-110 active:scale-95"
+            style={{ background: "#d4af37", color: "#1b1412" }}
+            title="Advance to next status"
           >
-            <div
-              className="px-5 py-4"
-              style={{ borderTop: "1px solid #3a2e28", background: "#241b17" }}
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {/* Items */}
-                <div>
-                  <h4
-                    className="text-xs font-semibold uppercase tracking-wider mb-3"
-                    style={{ color: "#a0967a" }}
-                  >
-                    Items
-                  </h4>
-                  <div className="space-y-2">
-                    {order.items.map((item) => (
-                      <div
-                        key={item.productId}
-                        className="flex justify-between text-sm"
-                      >
-                        <span style={{ color: "#f5f5f5" }}>
-                          {item.name}{" "}
-                          <span style={{ color: "#7a6e5a" }}>
-                            × {item.quantity}
-                          </span>
-                        </span>
-                        <span style={{ color: "#d4af37" }}>
-                          {(item.price * item.quantity) % 1 === 0
-                            ? item.price * item.quantity
-                            : (item.price * item.quantity).toFixed(2)}{" "}
-                          €
-                        </span>
-                      </div>
-                    ))}
-                    <div
-                      className="flex justify-between text-sm font-semibold pt-2"
-                      style={{ borderTop: "1px solid #3a2e28" }}
-                    >
-                      <span style={{ color: "#a0967a" }}>Total</span>
-                      <span style={{ color: "#d4af37" }}>
-                        {order.totalPrice % 1 === 0
-                          ? order.totalPrice
-                          : order.totalPrice.toFixed(2)}{" "}
-                        €
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Details */}
-                <div>
-                  <h4
-                    className="text-xs font-semibold uppercase tracking-wider mb-3"
-                    style={{ color: "#a0967a" }}
-                  >
-                    Details
-                  </h4>
-                  <div className="space-y-2 text-sm">
-                    <div>
-                      <span className="text-xs" style={{ color: "#7a6e5a" }}>
-                        Phone:{" "}
-                      </span>
-                      <span style={{ color: "#f5f5f5" }}>{order.phone}</span>
-                    </div>
-                    {order.customerName && (
-                      <div>
-                        <span className="text-xs" style={{ color: "#7a6e5a" }}>
-                          Name:{" "}
-                        </span>
-                        <span style={{ color: "#f5f5f5" }}>
-                          {order.customerName}
-                        </span>
-                      </div>
-                    )}
-                    <div>
-                      <span className="text-xs" style={{ color: "#7a6e5a" }}>
-                        Address:{" "}
-                      </span>
-                      <span style={{ color: "#f5f5f5" }}>{order.address}</span>
-                    </div>
-                    {order.deliveryTime && (
-                      <div>
-                        <span className="text-xs" style={{ color: "#7a6e5a" }}>
-                          Time:{" "}
-                        </span>
-                        <span style={{ color: "#f5f5f5" }}>
-                          {order.deliveryTime}
-                        </span>
-                      </div>
-                    )}
-                    <div>
-                      <span className="text-xs" style={{ color: "#7a6e5a" }}>
-                        Ordered:{" "}
-                      </span>
-                      <span style={{ color: "#a0967a" }}>
-                        {formatDate(order.createdAt)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
+            <ArrowRight size={12} />
+          </button>
         )}
-      </AnimatePresence>
-    </div>
+      </div>
+    </motion.div>
   );
 }
 
@@ -222,6 +159,8 @@ export function AdminOrdersPage() {
   const isAdmin = useAdminStore((s) => s.isAdmin);
   const logout = useAdminStore((s) => s.logout);
   const { actor } = useActor();
+
+  const [statusMap, setStatusMap] = useState<Record<number, OrderStatus>>({});
 
   const {
     data: orders = [],
@@ -267,16 +206,35 @@ export function AdminOrdersPage() {
             createdAt: Number(o.createdAt) / 1_000_000, // nanoseconds to ms
           }),
         )
-        .sort((a, b) => b.createdAt - a.createdAt); // newest first
+        .sort((a: Order, b: Order) => b.createdAt - a.createdAt);
     },
     enabled: !!actor && isAdmin,
     refetchInterval: 30_000,
   });
 
+  const handleAdvance = (orderNumber: number) => {
+    setStatusMap((prev) => {
+      const current = prev[orderNumber] ?? "new";
+      const currentIdx = STATUS_ORDER.indexOf(current);
+      const nextStatus =
+        STATUS_ORDER[Math.min(currentIdx + 1, STATUS_ORDER.length - 1)];
+      return { ...prev, [orderNumber]: nextStatus };
+    });
+  };
+
+  const getOrderStatus = (orderNumber: number): OrderStatus =>
+    statusMap[orderNumber] ?? "new";
+
   if (!isAdmin) {
     navigate({ to: "/admin" });
     return null;
   }
+
+  // Build columns
+  const columns = STATUS_COLUMNS.map((col) => ({
+    ...col,
+    orders: orders.filter((o) => getOrderStatus(o.orderNumber) === col.key),
+  }));
 
   return (
     <div className="min-h-screen" style={{ background: "#1b1412" }}>
@@ -332,7 +290,8 @@ export function AdminOrdersPage() {
         </div>
       </header>
 
-      <main className="p-6 max-w-5xl mx-auto">
+      <main className="p-6">
+        {/* Page title + refresh */}
         <div className="mb-8 flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-bold" style={{ color: "#f5f5f5" }}>
@@ -357,6 +316,7 @@ export function AdminOrdersPage() {
           </button>
         </div>
 
+        {/* Loading state */}
         {isLoading ? (
           <div
             className="flex flex-col items-center justify-center py-24 text-center"
@@ -382,9 +342,78 @@ export function AdminOrdersPage() {
             </p>
           </div>
         ) : (
-          <div>
-            {orders.map((order, i) => (
-              <OrderRow key={order.orderNumber} order={order} index={i} />
+          /* Kanban board */
+          <div
+            data-ocid="admin.orders_board"
+            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4"
+          >
+            {columns.map((col, colIdx) => (
+              <div
+                key={col.key}
+                data-ocid={`admin.orders_column.${colIdx + 1}`}
+                className="rounded-xl p-4 min-h-[200px]"
+                style={{
+                  background: "#150f0d",
+                  border: "1px solid #3a2e28",
+                }}
+              >
+                {/* Column header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-2 h-2 rounded-full"
+                      style={{ background: col.color }}
+                    />
+                    <h3
+                      className="text-xs font-bold tracking-widest uppercase"
+                      style={{ color: col.color }}
+                    >
+                      {col.label}
+                    </h3>
+                  </div>
+                  <span
+                    className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                    style={{ background: col.bg, color: col.color }}
+                  >
+                    {col.orders.length}
+                  </span>
+                </div>
+
+                {/* Order cards */}
+                <div>
+                  {col.orders.length === 0 ? (
+                    <div
+                      className="flex items-center justify-center py-10 rounded-lg"
+                      style={{
+                        border: "1px dashed #3a2e28",
+                      }}
+                    >
+                      <p className="text-xs" style={{ color: "#3a2e28" }}>
+                        Empty
+                      </p>
+                    </div>
+                  ) : (
+                    col.orders.map((order, cardIdx) => {
+                      // Compute global card index for deterministic marker
+                      const globalCardIdx =
+                        columns
+                          .slice(0, colIdx)
+                          .reduce((sum, c) => sum + c.orders.length, 0) +
+                        cardIdx +
+                        1;
+                      return (
+                        <OrderCard
+                          key={order.orderNumber}
+                          order={order}
+                          cardIndex={globalCardIdx}
+                          status={col.key}
+                          onAdvance={handleAdvance}
+                        />
+                      );
+                    })
+                  )}
+                </div>
+              </div>
             ))}
           </div>
         )}

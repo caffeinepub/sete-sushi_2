@@ -7,11 +7,12 @@ import { useCartStore } from "../store/useStore";
 interface ProductCardProps {
   product: Product;
   index: number;
+  onSetAdded?: () => void;
 }
 
 const PLACEHOLDER = "/assets/generated/sushi-roll-placeholder.dim_600x400.jpg";
 
-export function ProductCard({ product, index }: ProductCardProps) {
+export function ProductCard({ product, index, onSetAdded }: ProductCardProps) {
   const addItem = useCartStore((s) => s.addItem);
 
   const handleAddToCart = () => {
@@ -25,6 +26,9 @@ export function ProductCard({ product, index }: ProductCardProps) {
       description: product.name,
       duration: 2000,
     });
+    if (product.category === "set") {
+      onSetAdded?.();
+    }
   };
 
   return (

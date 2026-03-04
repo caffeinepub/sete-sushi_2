@@ -1,33 +1,15 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Star } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Footer } from "../components/Footer";
 import { ProductCard } from "../components/ProductCard";
 import { StickyCartBar } from "../components/StickyCartBar";
+import { UpsellModal } from "../components/UpsellModal";
 import { Skeleton } from "../components/ui/skeleton";
 import { useActor } from "../hooks/useActor";
 import type { Product, ProductCategory } from "../store/types";
 import { seedIfEmpty } from "../utils/seedProducts";
-
-const categoryConfig: Record<
-  ProductCategory,
-  { label: string; description: string }
-> = {
-  set: {
-    label: "Sushi seti",
-    description: "Mūsu rūpīgi veidotie sushi seti dažādām kompānijām",
-  },
-  addon: {
-    label: "Pielikumi",
-    description: "Papildiniet savu pasūtījumu ar klasiskajiem ruļļiem",
-  },
-  drink: {
-    label: "Dzērieni",
-    description: "Atspirdzinošie dzērieni jūsu maltītei",
-  },
-};
-
-const categoryOrder: ProductCategory[] = ["set", "addon", "drink"];
 
 function ProductCardSkeleton() {
   return (
@@ -54,10 +36,87 @@ function ProductCardSkeleton() {
   );
 }
 
+interface MenuSection {
+  key: string;
+  label: string;
+  description: string;
+  items: Product[];
+  featured?: boolean;
+}
+
+function buildMenuSections(products: Product[]): MenuSection[] {
+  const enabled = products.filter((p) => p.enabled);
+
+  const sets = enabled.filter((p) => p.category === "set");
+  const addons = enabled.filter((p) => p.category === "addon");
+  const drinks = enabled.filter((p) => p.category === "drink");
+
+  // KOMBO: first 4 sets by id order
+  const sortedSets = [...sets].sort((a, b) => a.id - b.id);
+  const komboSets = sortedSets.slice(0, 4);
+
+  // POPULĀRĀKAIS: highlighted product (Tempura Set / SETE 04, index 3 = 4th set)
+  const popularsSet = sortedSets[3] ?? null;
+
+  // SUSHI KOMPLEKTI: remaining sets (index >= 4)
+  const sushiSets = sortedSets.slice(4);
+
+  const sections: MenuSection[] = [];
+
+  if (komboSets.length > 0) {
+    sections.push({
+      key: "kombo",
+      label: "KOMBO",
+      description: "Izdevīgi komplekti labākajai baudai",
+      items: komboSets,
+    });
+  }
+
+  if (popularsSet) {
+    sections.push({
+      key: "popularakais",
+      label: "POPULĀRĀKAIS",
+      description: "Visvairāk pieprasītais komplekts",
+      items: [popularsSet],
+      featured: true,
+    });
+  }
+
+  if (sushiSets.length > 0) {
+    sections.push({
+      key: "sushi-komplekti",
+      label: "SUSHI KOMPLEKTI",
+      description: "Plašāki seti lielākām kompānijām",
+      items: sushiSets,
+    });
+  }
+
+  if (addons.length > 0) {
+    sections.push({
+      key: "roli",
+      label: "ROLI (+9€)",
+      description: "Papildiniet savu pasūtījumu ar klasiskajiem ruļļiem",
+      items: addons,
+    });
+  }
+
+  if (drinks.length > 0) {
+    sections.push({
+      key: "dzerieni",
+      label: "DZĒRIENI",
+      description: "Atspirdzinošie dzērieni jūsu maltītei",
+      items: drinks,
+    });
+  }
+
+  return sections;
+}
+
 export function MenuPage() {
   const { actor, isFetching: actorFetching } = useActor();
   const queryClient = useQueryClient();
   const seededRef = useRef(false);
+  const [showUpsell, setShowUpsell] = useState(false);
 
   const { data: products = [], isLoading } = useQuery<Product[]>({
     queryKey: ["products"],
@@ -92,6 +151,7 @@ export function MenuPage() {
   }, [actor, actorFetching, isLoading, products.length, queryClient]);
 
   const loading = isLoading || actorFetching;
+  const sections = buildMenuSections(products);
 
   // Track cumulative index for data-ocid markers
   let globalIndex = 0;
@@ -148,7 +208,7 @@ export function MenuPage() {
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pb-24">
         {loading ? (
           /* Loading skeletons */
-          <section className="mb-20 mt-8">
+          <section className="mb-20 mt-8" data-ocid="menu.loading_state">
             <div
               className="mb-10 pb-4"
               style={{ borderBottom: "1px solid #3a2e28" }}
@@ -181,13 +241,9 @@ export function MenuPage() {
             </p>
           </div>
         ) : (
-          categoryOrder.map((category) => {
-            const items = products.filter((p) => p.category === category);
-            if (items.length === 0) return null;
-            const config = categoryConfig[category];
-
+          sections.map((section) => {
             return (
-              <section key={category} className="mb-20 mt-8 first:mt-0">
+              <section key={section.key} className="mb-20 mt-8 first:mt-0">
                 {/* Section heading */}
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
@@ -202,28 +258,53 @@ export function MenuPage() {
                       style={{ background: "#d4af37" }}
                     />
                     <h2
-                      className="font-display text-2xl md:text-3xl font-bold"
+                      className="font-display text-2xl md:text-3xl font-bold flex items-center gap-2"
                       style={{ color: "#f5f5f5" }}
                     >
-                      {config.label}
+                      {section.featured && (
+                        <Star
+                          size={18}
+                          fill="#d4af37"
+                          style={{ color: "#d4af37" }}
+                        />
+                      )}
+                      {section.label}
                     </h2>
                   </div>
                   <p className="text-sm ml-4" style={{ color: "#a0967a" }}>
-                    {config.description}
+                    {section.description}
                   </p>
                 </motion.div>
 
                 {/* Product grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {items.map((product) => {
+                  {section.items.map((product) => {
                     const cardIndex = globalIndex;
                     globalIndex++;
                     return (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        index={cardIndex}
-                      />
+                      <div key={product.id} className="relative">
+                        {section.featured && (
+                          <div
+                            className="absolute top-3 left-3 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
+                            style={{
+                              background: "#d4af37",
+                              color: "#1b1412",
+                            }}
+                          >
+                            <Star size={10} fill="#1b1412" />
+                            Populārākais
+                          </div>
+                        )}
+                        <ProductCard
+                          product={product}
+                          index={cardIndex}
+                          onSetAdded={
+                            product.category === "set"
+                              ? () => setShowUpsell(true)
+                              : undefined
+                          }
+                        />
+                      </div>
                     );
                   })}
                 </div>
@@ -235,6 +316,7 @@ export function MenuPage() {
 
       <Footer />
       <StickyCartBar />
+      <UpsellModal isOpen={showUpsell} onClose={() => setShowUpsell(false)} />
     </div>
   );
 }

@@ -1,8 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, ChefHat, Leaf, UtensilsCrossed } from "lucide-react";
+import { ArrowRight, ChefHat, Leaf, Star, UtensilsCrossed } from "lucide-react";
 import { motion } from "motion/react";
 import { Footer } from "../components/Footer";
 import { StickyCartBar } from "../components/StickyCartBar";
+import { useCartStore } from "../store/useStore";
 
 const features = [
   {
@@ -23,6 +24,17 @@ const features = [
 ];
 
 export function HomePage() {
+  const addItem = useCartStore((s) => s.addItem);
+
+  const handleOrderSete04 = () => {
+    addItem({
+      productId: 4,
+      name: "Tempura Set",
+      price: 45,
+      image: "/assets/generated/sushi-roll-placeholder.dim_600x400.jpg",
+    });
+  };
+
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -137,15 +149,28 @@ export function HomePage() {
             Pasūti tiešsaistē. Saņem uz vietas vai piegāde uz adresi.
           </motion.p>
 
-          {/* CTA */}
+          {/* CTA buttons */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.55 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
             <Link
               to="/menu"
-              data-ocid="hero.cta_button"
+              data-ocid="hero.order_now_button"
+              className="group inline-flex items-center gap-3 px-8 py-4 rounded-full text-sm font-semibold tracking-[0.2em] uppercase transition-all duration-300 hover:brightness-110 active:scale-95 hover:shadow-[0_0_30px_rgba(212,175,55,0.4)]"
+              style={{ background: "#d4af37", color: "#1b1412" }}
+            >
+              Pasūtīt tagad
+              <ArrowRight
+                size={16}
+                className="transition-transform duration-300 group-hover:translate-x-1"
+              />
+            </Link>
+            <Link
+              to="/menu"
+              data-ocid="hero.view_menu_button"
               className="group inline-flex items-center gap-3 px-8 py-4 rounded-full text-sm font-semibold tracking-[0.2em] uppercase transition-all duration-300 hover:shadow-[0_0_30px_rgba(212,175,55,0.4)]"
               style={{
                 border: "1.5px solid #d4af37",
@@ -154,12 +179,54 @@ export function HomePage() {
                 backdropFilter: "blur(4px)",
               }}
             >
-              Apskatīt piedāvājumus
-              <ArrowRight
-                size={16}
-                className="transition-transform duration-300 group-hover:translate-x-1"
-              />
+              Apskatīt piedāvājumu
             </Link>
+          </motion.div>
+
+          {/* Featured product card */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.7 }}
+            className="mt-8"
+          >
+            <div
+              data-ocid="hero.featured_product_card"
+              className="inline-flex items-center gap-4 px-5 py-3 rounded-2xl"
+              style={{
+                background: "rgba(27,20,18,0.85)",
+                border: "1px solid rgba(212,175,55,0.3)",
+                backdropFilter: "blur(8px)",
+              }}
+            >
+              <Star
+                size={16}
+                fill="#d4af37"
+                style={{ color: "#d4af37", flexShrink: 0 }}
+              />
+              <div className="text-left">
+                <p
+                  className="text-xs font-medium tracking-widest uppercase"
+                  style={{ color: "#d4af37" }}
+                >
+                  Populārākais komplekts
+                </p>
+                <p
+                  className="text-sm font-semibold"
+                  style={{ color: "#f5f5f5" }}
+                >
+                  SETE 04 · 48 gab · 45€
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleOrderSete04}
+                className="ml-2 px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase transition-all hover:brightness-110 active:scale-95"
+                style={{ background: "#d4af37", color: "#1b1412" }}
+              >
+                Pasūtīt
+              </button>
+            </div>
           </motion.div>
         </div>
 
@@ -326,6 +393,17 @@ export function HomePage() {
             </Link>
           </div>
         </motion.div>
+      </section>
+
+      {/* SEO text */}
+      <section className="py-6 px-4" style={{ background: "#150f0d" }}>
+        <p
+          className="text-center text-xs max-w-xl mx-auto"
+          style={{ color: "#7a6e5a" }}
+          aria-label="SEO: Sushi piegāde Rīgā"
+        >
+          Sushi piegāde Rīgā – svaigi sushi komplekti no SETE.
+        </p>
       </section>
 
       <Footer />

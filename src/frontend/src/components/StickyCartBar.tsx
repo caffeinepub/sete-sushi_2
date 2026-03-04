@@ -9,7 +9,9 @@ export function StickyCartBar() {
   const itemCount = useCartStore((s) => s.itemCount)();
   const totalPrice = useCartStore((s) => s.totalPrice)();
 
-  const label = itemCount === 1 ? "1 prece grozā" : `${itemCount} preces grozā`;
+  const priceFormatted =
+    totalPrice % 1 === 0 ? `${totalPrice}` : totalPrice.toFixed(2);
+  const label = `${itemCount} produkti | ${priceFormatted}€`;
 
   return (
     <AnimatePresence>
@@ -36,12 +38,6 @@ export function StickyCartBar() {
                 style={{ color: "#f5f5f5" }}
               >
                 {label}
-                <span
-                  className="ml-2 font-semibold"
-                  style={{ color: "#d4af37" }}
-                >
-                  • {totalPrice.toFixed(2)} €
-                </span>
               </span>
             </div>
 
