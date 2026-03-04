@@ -55,7 +55,7 @@ function ProductModal({
 }: {
   product: Product | null;
   onClose: () => void;
-  onSave: (data: ProductFormData, id?: number) => Promise<void>;
+  onSave: (data: ProductFormData, id?: number) => Promise<boolean>;
   saving: boolean;
   uploadImage: (
     file: File,
@@ -121,8 +121,8 @@ function ProductModal({
       return;
     }
     setError("");
-    await onSave(form, product?.id);
-    onClose();
+    const success = await onSave(form, product?.id);
+    if (success) onClose();
   };
 
   return (
@@ -446,8 +446,14 @@ export function AdminProductsPage() {
     return null;
   }
 
-  const handleSave = async (data: ProductFormData, id?: number) => {
-    if (!actor) return;
+  const handleSave = async (
+    data: ProductFormData,
+    id?: number,
+  ): Promise<boolean> => {
+    if (!actor) {
+      toast.error("Savienojums nav gatavs. Mēģiniet vēlreiz.");
+      return false;
+    }
     const price = Number.parseFloat(data.price);
     setSavingProduct(true);
     try {
@@ -475,8 +481,11 @@ export function AdminProductsPage() {
       }
       await queryClient.invalidateQueries({ queryKey: ["admin-products"] });
       await queryClient.invalidateQueries({ queryKey: ["products"] });
-    } catch {
+      return true;
+    } catch (err) {
+      console.error("Failed to save product:", err);
       toast.error("Failed to save product");
+      return false;
     } finally {
       setSavingProduct(false);
     }

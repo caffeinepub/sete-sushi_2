@@ -147,9 +147,6 @@ export function UpsellModal({ isOpen, onClose }: UpsellModalProps) {
                       >
                         {item.name}
                       </p>
-                      <p className="text-xs" style={{ color: "#7a6e5a" }}>
-                        {item.pieceCount}
-                      </p>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
                       <span

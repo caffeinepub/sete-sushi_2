@@ -110,7 +110,7 @@ export function ProductCard({ product, index, onSetAdded }: ProductCardProps) {
             style={{ background: "#d4af37", color: "#1b1412" }}
           >
             <ShoppingBag size={15} />
-            <span>Pievienot</span>
+            <span>Pievienot grozam</span>
           </button>
         </div>
       </div>

@@ -1,50 +1,47 @@
 # SETE Sushi
 
 ## Current State
+The app has a working Motoko backend with a `Product` type that includes:
+`id, name, price, image, pieceCount, peopleRecommended, category, enabled`
 
-Full-stack sushi ordering website (Motoko backend + React frontend) already exists with:
-- `/home`, `/menu`, `/cart`, `/checkout`, `/admin`, `/admin/products`, `/admin/orders` routes
-- 14 seeded products (7 sets, 3 addons, 4 drinks)
-- Cart persisted in localStorage via Zustand
-- Orders saved to backend canister with `submitOrder()` / `getOrders()`
-- Admin panel with product CRUD, image upload via blob storage, enable/disable toggle
-- Sticky cart bar, success modal, order form with consent checkbox
+The frontend `AdminProductsPage` calls `actor.addProduct(name, price, image, pieceCount, peopleRecommended, category)` — which matches the current backend signature.
+
+**Known bugs causing "Failed to save product" and empty menu:**
+1. The backend `seeded` flag is `true` from a prior deploy, so the Motoko seed block never re-runs — products array may be empty after upgrade.
+2. The frontend `seedIfEmpty` and `useProductSeed` hooks both call `getAllProducts()` — but `getProducts()` (used in MenuPage) only returns `enabled=true` products. If these are broken at the actor level (e.g. IDL mismatch after a prior failed deploy), the menu shows "Ēdienkarte nav pieejama".
+3. The requested product structure adds `description` and removes `pieceCount`/`peopleRecommended`, creating a type mismatch between the frontend and backend.
 
 ## Requested Changes (Diff)
 
 ### Add
-
-1. **Two hero buttons** — "Pasūtīt tagad" (primary gold, links to `/menu`) and "Apskatīt piedāvājumu" (secondary outlined, links to `/menu`) replacing current single CTA.
-2. **Featured product card on homepage** — a highlighted card below the two CTA buttons, labeled "⭐ Populārākais komplekts – SETE 04" (maps to Tempura Set, 45€), linking to `/menu`.
-3. **SEO paragraph on homepage** — static text "Sushi piegāde Rīgā – svaigi sushi komplekti no SETE." in the hero or feature section.
-4. **Upsell modal** — when a "set" category product is added to cart, show a modal "Bieži pievieno kopā" with quick-add cards for Spicy Tuna Roll (+9€), Salmon Roll (+8€), and Pepsi (+2.50€). Each card has an "Add" button; the modal has a "Turpināt" (close) button.
-5. **Orders Kanban board in admin** — replace the current expandable list on `/admin/orders` with a 4-column board: NEW | PREPARING | READY | COMPLETED. Each order card shows: order number, phone, items summary, total price, time. Admin can drag or use buttons to move cards between columns. Order status field needs to be wired to backend via new `updateOrderStatus(orderNumber, status)` function.
-6. **Sticky cart bar format update** — change label from "X preces grozā" to "X produkti | Y€" and button text stays "SKATĪT GROZU".
+- `description` field to `Product` type (Motoko + IDL + frontend types)
+- Seed products matching the requested 5-item list: SETE 01, SETE 02, SETE 04, Spicy Tuna Roll, Pepsi
+- Empty menu fallback message "Pašlaik ēdienkarte tiek gatavota."
 
 ### Modify
-
-1. **Menu categories** — rename/restructure the category display labels and order:
-   - `set` → shown in two sections:
-     - "KOMBO" (show sets with id ≤ 4 or a new `isKombo` flag, for now use first 4 sets)
-     - "SUSHI KOMPLEKTI" (remaining sets)
-   - New section "POPULĀRĀKAIS" — show the single product marked as SETE 04 / Tempura Set highlighted
-   - `addon` → "ROLI (+9€)"
-   - `drink` → "DZĒRIENI"
-   - Category order: KOMBO → POPULĀRĀKAIS → SUSHI KOMPLEKTI → ROLI → DZĒRIENI
-2. **Homepage hero** — update title from "SETE" to "SETE – Premium sushi Rīgā" as the subtitle/supporting text combination; keep SETE as the giant gold logo. Add both CTA buttons. Add featured product card.
-3. **StickyCartBar label** — update format to "X produkti | Y€".
-4. **AdminOrdersPage** — replace flat list with Kanban column board layout. Each column displays orders of that status. Add status-change controls on each card.
+- `Product` type in `main.mo`: remove `pieceCount`, remove `peopleRecommended`, add `description`
+- `addProduct` Motoko function signature: `(name, price, image, description, category) -> Product`
+- `updateProduct` Motoko function signature: updated to match
+- Backend seed data: replace old seed with new 5-product seed
+- `backend.js` IDL: update Product record and all function signatures
+- `store/types.ts`: update `Product` interface
+- `utils/seedProducts.ts`: update seed list and `addProduct` call signature
+- `hooks/useProductSeed.ts`: update seed list and `addProduct` call signature
+- `pages/AdminProductsPage.tsx`: replace `pieceCount`/`peopleRecommended` fields with `description`, update save/edit logic
+- `pages/MenuPage.tsx`: update product card rendering, show "Pašlaik ēdienkarte tiek gatavota." when empty
+- `components/ProductCard.tsx`: update to use `description` instead of `pieceCount`/`peopleRecommended`
+- Menu categories: SUSHI KOMPLEKTI (category=set), ROLI (category=addon), DZĒRIENI (category=drink)
 
 ### Remove
-
-- Nothing removed. Existing functionality preserved.
+- `pieceCount` field from all Product types and forms
+- `peopleRecommended` field from all Product types and forms
 
 ## Implementation Plan
-
-1. **HomePage.tsx** — Add second CTA button "Pasūtīt tagad" (gold filled) + "Apskatīt piedāvājumu" (outlined). Add featured product card section. Add SEO text paragraph.
-2. **MenuPage.tsx** — Remap category display logic: split `set` into KOMBO (first 4) and SUSHI KOMPLEKTI (rest), add POPULĀRĀKAIS section (Tempura Set), rename `addon` → ROLI, `drink` → DZĒRIENI. Update category order.
-3. **ProductCard.tsx** + new **UpsellModal.tsx** — after adding a set to cart, open upsell modal with 3 quick-add items. Modal closes on "Turpināt" or outside click.
-4. **StickyCartBar.tsx** — change label format to "X produkti | Y€".
-5. **AdminOrdersPage.tsx** — rewrite to Kanban board with 4 columns. Add `updateOrderStatus` actor call on status change buttons.
-6. **backend/main.mo** — Add `updateOrderStatus(orderNum: Nat, status: Text): async Bool` function. Add `status` field to Order type (default "new"). Update `getOrders` to return status field.
-7. **backend.js IDL** — add `updateOrderStatus` to IDL factory.
+1. Update `main.mo`: new Product type (id, name, description, price, category, image, enabled), update addProduct/updateProduct signatures, update seed data with 5 products
+2. Update `backend.js` IDL to match new Product record and function signatures
+3. Update `store/types.ts` Product interface
+4. Update `utils/seedProducts.ts` seed data and addProduct call
+5. Update `hooks/useProductSeed.ts` seed data and addProduct call
+6. Update `pages/AdminProductsPage.tsx`: swap pieceCount/peopleRecommended for description
+7. Update `pages/MenuPage.tsx`: update category labels, empty fallback message
+8. Update `components/ProductCard.tsx` if it references pieceCount/peopleRecommended

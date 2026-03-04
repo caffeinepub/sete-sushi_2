@@ -1,5 +1,4 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Star } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { Footer } from "../components/Footer";
@@ -41,60 +40,32 @@ interface MenuSection {
   label: string;
   description: string;
   items: Product[];
-  featured?: boolean;
 }
 
 function buildMenuSections(products: Product[]): MenuSection[] {
   const enabled = products.filter((p) => p.enabled);
 
-  const sets = enabled.filter((p) => p.category === "set");
+  const sets = [...enabled.filter((p) => p.category === "set")].sort(
+    (a, b) => a.id - b.id,
+  );
   const addons = enabled.filter((p) => p.category === "addon");
   const drinks = enabled.filter((p) => p.category === "drink");
 
-  // KOMBO: first 4 sets by id order
-  const sortedSets = [...sets].sort((a, b) => a.id - b.id);
-  const komboSets = sortedSets.slice(0, 4);
-
-  // POPULĀRĀKAIS: highlighted product (Tempura Set / SETE 04, index 3 = 4th set)
-  const popularsSet = sortedSets[3] ?? null;
-
-  // SUSHI KOMPLEKTI: remaining sets (index >= 4)
-  const sushiSets = sortedSets.slice(4);
-
   const sections: MenuSection[] = [];
 
-  if (komboSets.length > 0) {
-    sections.push({
-      key: "kombo",
-      label: "KOMBO",
-      description: "Izdevīgi komplekti labākajai baudai",
-      items: komboSets,
-    });
-  }
-
-  if (popularsSet) {
-    sections.push({
-      key: "popularakais",
-      label: "POPULĀRĀKAIS",
-      description: "Visvairāk pieprasītais komplekts",
-      items: [popularsSet],
-      featured: true,
-    });
-  }
-
-  if (sushiSets.length > 0) {
+  if (sets.length > 0) {
     sections.push({
       key: "sushi-komplekti",
       label: "SUSHI KOMPLEKTI",
-      description: "Plašāki seti lielākām kompānijām",
-      items: sushiSets,
+      description: "Rūpīgi veidoti seti 2–6 personām",
+      items: sets,
     });
   }
 
   if (addons.length > 0) {
     sections.push({
       key: "roli",
-      label: "ROLI (+9€)",
+      label: "ROLI",
       description: "Papildiniet savu pasūtījumu ar klasiskajiem ruļļiem",
       items: addons,
     });
@@ -237,7 +208,7 @@ export function MenuPage() {
             data-ocid="menu.empty_state"
           >
             <p className="text-sm" style={{ color: "#7a6e5a" }}>
-              Ēdienkarte nav pieejama
+              Pašlaik ēdienkarte tiek gatavota.
             </p>
           </div>
         ) : (
@@ -258,16 +229,9 @@ export function MenuPage() {
                       style={{ background: "#d4af37" }}
                     />
                     <h2
-                      className="font-display text-2xl md:text-3xl font-bold flex items-center gap-2"
+                      className="font-display text-2xl md:text-3xl font-bold"
                       style={{ color: "#f5f5f5" }}
                     >
-                      {section.featured && (
-                        <Star
-                          size={18}
-                          fill="#d4af37"
-                          style={{ color: "#d4af37" }}
-                        />
-                      )}
                       {section.label}
                     </h2>
                   </div>
@@ -282,19 +246,7 @@ export function MenuPage() {
                     const cardIndex = globalIndex;
                     globalIndex++;
                     return (
-                      <div key={product.id} className="relative">
-                        {section.featured && (
-                          <div
-                            className="absolute top-3 left-3 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
-                            style={{
-                              background: "#d4af37",
-                              color: "#1b1412",
-                            }}
-                          >
-                            <Star size={10} fill="#1b1412" />
-                            Populārākais
-                          </div>
-                        )}
+                      <div key={product.id}>
                         <ProductCard
                           product={product}
                           index={cardIndex}
