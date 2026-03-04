@@ -7,18 +7,18 @@ import { StickyCartBar } from "../components/StickyCartBar";
 const features = [
   {
     icon: Leaf,
-    title: "Sastāvdaļas",
+    title: "Svaigākās sastāvdaļas",
     text: "Ikdienas piegādes no uzticamiem piegādātājiem.",
   },
   {
     icon: ChefHat,
-    title: "Meistarība",
-    text: "Sushi šefi ar vairāk nekā 10 gadu pieredzi.",
+    title: "Meistaru pieredze",
+    text: "Sushi šefi ar ilggadēju pieredzi Japānas un Eiropas virtuvē.",
   },
   {
     icon: UtensilsCrossed,
-    title: "Sushi komplekti",
-    text: "Rūpīgi veidoti komplekti 2–6 personām.",
+    title: "Ideāli kopā ar draugiem",
+    text: "Seti 2–6 personām — vakaram, svinībām vai banketam.",
   },
 ];
 
@@ -120,10 +120,21 @@ export function HomePage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="text-xl md:text-2xl font-light tracking-widest mb-10"
+            className="text-xl md:text-2xl font-light tracking-widest mb-4"
             style={{ color: "#e8d8b4", letterSpacing: "0.3em" }}
           >
             Premium sushi Rīgā
+          </motion.p>
+
+          {/* Supporting line */}
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.48 }}
+            className="text-sm md:text-base mb-10"
+            style={{ color: "#a0967a" }}
+          >
+            Pasūti tiešsaistē. Saņem uz vietas vai piegāde uz adresi.
           </motion.p>
 
           {/* CTA */}

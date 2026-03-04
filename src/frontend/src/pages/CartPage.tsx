@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { Footer } from "../components/Footer";
+import { StickyCartBar } from "../components/StickyCartBar";
 import { useCartStore } from "../store/useStore";
 
 const PLACEHOLDER = "/assets/generated/sushi-roll-placeholder.dim_600x400.jpg";
@@ -77,7 +78,7 @@ export function CartPage() {
               Grozs ir tukšs
             </h2>
             <p className="text-sm mb-8" style={{ color: "#a0967a" }}>
-              Pievienojiet produktus no mūsu ēdienkartes
+              Dodieties uz piedāvājumiem un pievienojiet setus.
             </p>
             <Link
               to="/menu"
@@ -85,7 +86,7 @@ export function CartPage() {
               style={{ background: "#d4af37", color: "#1b1412" }}
             >
               <ArrowLeft size={16} />
-              Uz ēdienkarti
+              Apskatīt piedāvājumus
             </Link>
           </motion.div>
         ) : (
@@ -275,7 +276,7 @@ export function CartPage() {
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold tracking-widest uppercase transition-all hover:brightness-110 active:scale-[0.98]"
                   style={{ background: "#d4af37", color: "#1b1412" }}
                 >
-                  Turpināt pasūtījumu
+                  Turpināt uz noformēšanu
                   <ArrowRight size={16} />
                 </button>
               </motion.div>
@@ -285,6 +286,7 @@ export function CartPage() {
       </main>
 
       <Footer />
+      <StickyCartBar />
     </div>
   );
 }

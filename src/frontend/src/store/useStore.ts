@@ -1,50 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { CartItem, Order, Product } from "./types";
-import { INITIAL_PRODUCTS } from "./types";
-
-// ── Products store ─────────────────────────────────────────────
-interface ProductsState {
-  products: Product[];
-  setProducts: (products: Product[]) => void;
-  updateProduct: (product: Product) => void;
-  addProduct: (product: Product) => void;
-  toggleProduct: (id: number) => void;
-}
-
-export const useProductsStore = create<ProductsState>()(
-  persist(
-    (set) => ({
-      products: INITIAL_PRODUCTS,
-      setProducts: (products) => set({ products }),
-      updateProduct: (updated) =>
-        set((state) => ({
-          products: state.products.map((p) =>
-            p.id === updated.id ? updated : p,
-          ),
-        })),
-      addProduct: (product) =>
-        set((state) => ({ products: [...state.products, product] })),
-      toggleProduct: (id) =>
-        set((state) => ({
-          products: state.products.map((p) =>
-            p.id === id ? { ...p, enabled: !p.enabled } : p,
-          ),
-        })),
-    }),
-    {
-      name: "sete_products",
-      // Only seed if never stored before
-      merge: (persisted, current) => {
-        const p = persisted as Partial<ProductsState>;
-        if (p.products && p.products.length > 0) {
-          return { ...current, products: p.products };
-        }
-        return current;
-      },
-    },
-  ),
-);
+import type { CartItem } from "./types";
 
 // ── Cart store ─────────────────────────────────────────────────
 interface CartState {
@@ -100,36 +56,6 @@ export const useCartStore = create<CartState>()(
         get().items.reduce((sum, i) => sum + i.price * i.quantity, 0),
     }),
     { name: "sete_cart" },
-  ),
-);
-
-// ── Orders store ───────────────────────────────────────────────
-interface OrdersState {
-  orders: Order[];
-  nextOrderNumber: number;
-  addOrder: (order: Omit<Order, "orderNumber" | "createdAt">) => Order;
-}
-
-export const useOrdersStore = create<OrdersState>()(
-  persist(
-    (set, get) => ({
-      orders: [],
-      nextOrderNumber: 1,
-      addOrder: (orderData) => {
-        const orderNumber = get().nextOrderNumber;
-        const order: Order = {
-          ...orderData,
-          orderNumber,
-          createdAt: Date.now(),
-        };
-        set((state) => ({
-          orders: [order, ...state.orders],
-          nextOrderNumber: state.nextOrderNumber + 1,
-        }));
-        return order;
-      },
-    }),
-    { name: "sete_orders" },
   ),
 );
 

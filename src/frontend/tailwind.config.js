@@ -83,8 +83,8 @@ export default {
         },
       },
       fontFamily: {
-        display: ["Playfair Display", "Georgia", "serif"],
-        body: ["Inter", "system-ui", "sans-serif"],
+        display: ["Georgia", "'Times New Roman'", "serif"],
+        body: ["Georgia", "'Times New Roman'", "serif"],
       },
       borderRadius: {
         lg: "var(--radius)",

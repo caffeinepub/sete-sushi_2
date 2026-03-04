@@ -1,16 +1,19 @@
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   ChevronDown,
   ChevronUp,
   LogOut,
   Package,
+  RefreshCw,
   Store,
   Truck,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
+import { useActor } from "../hooks/useActor";
 import type { Order } from "../store/types";
-import { useAdminStore, useOrdersStore } from "../store/useStore";
+import { useAdminStore } from "../store/useStore";
 
 function formatDate(ts: number) {
   return new Date(ts).toLocaleString("lv-LV", {
@@ -218,7 +221,57 @@ export function AdminOrdersPage() {
   const navigate = useNavigate();
   const isAdmin = useAdminStore((s) => s.isAdmin);
   const logout = useAdminStore((s) => s.logout);
-  const orders = useOrdersStore((s) => s.orders);
+  const { actor } = useActor();
+
+  const {
+    data: orders = [],
+    isLoading,
+    refetch,
+  } = useQuery<Order[]>({
+    queryKey: ["admin-orders"],
+    queryFn: async () => {
+      if (!actor) return [];
+      const raw = await actor.getOrders();
+      // Map backend Order (BigInt fields) to frontend Order type
+      return raw
+        .map(
+          (o: {
+            orderNumber: bigint | number;
+            items: Array<{
+              productId: bigint | number;
+              name: string;
+              price: number;
+              quantity: bigint | number;
+            }>;
+            totalPrice: number;
+            phone: string;
+            customerName: string;
+            address: string;
+            deliveryType: string;
+            deliveryTime: string;
+            createdAt: bigint | number;
+          }) => ({
+            orderNumber: Number(o.orderNumber),
+            items: o.items.map((i) => ({
+              productId: Number(i.productId),
+              name: i.name,
+              price: Number(i.price),
+              quantity: Number(i.quantity),
+            })),
+            totalPrice: o.totalPrice,
+            phone: o.phone,
+            customerName: o.customerName,
+            address: o.address,
+            deliveryType: o.deliveryType as "delivery" | "pickup",
+            deliveryTime: o.deliveryTime,
+            createdAt: Number(o.createdAt) / 1_000_000, // nanoseconds to ms
+          }),
+        )
+        .sort((a, b) => b.createdAt - a.createdAt); // newest first
+    },
+    enabled: !!actor && isAdmin,
+    refetchInterval: 30_000,
+  });
 
   if (!isAdmin) {
     navigate({ to: "/admin" });
@@ -280,16 +333,45 @@ export function AdminOrdersPage() {
       </header>
 
       <main className="p-6 max-w-5xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold" style={{ color: "#f5f5f5" }}>
-            Orders
-          </h1>
-          <p className="text-sm mt-1" style={{ color: "#7a6e5a" }}>
-            {orders.length} total order{orders.length !== 1 ? "s" : ""}
-          </p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold" style={{ color: "#f5f5f5" }}>
+              Orders
+            </h1>
+            <p className="text-sm mt-1" style={{ color: "#7a6e5a" }}>
+              {isLoading
+                ? "Loading..."
+                : `${orders.length} total order${orders.length !== 1 ? "s" : ""}`}
+            </p>
+          </div>
+          <button
+            type="button"
+            data-ocid="admin.orders_refresh_button"
+            onClick={() => refetch()}
+            disabled={isLoading}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all hover:bg-[#3a2e28] disabled:opacity-50"
+            style={{ color: "#a0967a" }}
+          >
+            <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
+            Refresh
+          </button>
         </div>
 
-        {orders.length === 0 ? (
+        {isLoading ? (
+          <div
+            className="flex flex-col items-center justify-center py-24 text-center"
+            data-ocid="admin.orders_loading_state"
+          >
+            <RefreshCw
+              size={32}
+              className="animate-spin"
+              style={{ color: "#3a2e28" }}
+            />
+            <p className="mt-4 text-sm" style={{ color: "#7a6e5a" }}>
+              Loading orders...
+            </p>
+          </div>
+        ) : orders.length === 0 ? (
           <div
             className="flex flex-col items-center justify-center py-24 text-center"
             data-ocid="admin.orders_empty_state"

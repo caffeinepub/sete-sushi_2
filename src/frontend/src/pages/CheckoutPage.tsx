@@ -1,10 +1,13 @@
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Clock, MapPin, Store, Truck } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Footer } from "../components/Footer";
 import { OrderSuccessModal } from "../components/OrderSuccessModal";
-import { useCartStore, useOrdersStore } from "../store/useStore";
+import { StickyCartBar } from "../components/StickyCartBar";
+import { useActor } from "../hooks/useActor";
+import { useCartStore } from "../store/useStore";
 
 const PLACEHOLDER = "/assets/generated/sushi-roll-placeholder.dim_600x400.jpg";
 
@@ -14,17 +17,21 @@ interface FormState {
   deliveryType: "delivery" | "pickup";
   address: string;
   deliveryTime: string;
+  comment: string;
+  consent: boolean;
 }
 
 interface FormErrors {
   phone?: string;
   address?: string;
+  consent?: string;
 }
 
 export function CheckoutPage() {
+  const navigate = useNavigate();
   const items = useCartStore((s) => s.items);
   const totalPrice = useCartStore((s) => s.totalPrice)();
-  const addOrder = useOrdersStore((s) => s.addOrder);
+  const { actor } = useActor();
 
   const [form, setForm] = useState<FormState>({
     phone: "",
@@ -32,9 +39,12 @@ export function CheckoutPage() {
     deliveryType: "delivery",
     address: "",
     deliveryTime: "",
+    comment: "",
+    consent: false,
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
+  const [submitting, setSubmitting] = useState(false);
   const [successModal, setSuccessModal] = useState<{
     open: boolean;
     orderNumber: number;
@@ -43,14 +53,22 @@ export function CheckoutPage() {
     orderNumber: 0,
   });
 
-  const update = (field: keyof FormState, value: string) => {
+  // Redirect to menu if cart is empty (but NOT while success modal is open)
+  useEffect(() => {
+    if (items.length === 0 && !successModal.open) {
+      toast.error("Grozs ir tukšs");
+      navigate({ to: "/menu" });
+    }
+  }, [items.length, successModal.open, navigate]);
+
+  const update = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [field]: value }));
-    if (errors[field as keyof FormErrors]) {
+    if (field in errors) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: FormErrors = {};
 
@@ -60,48 +78,59 @@ export function CheckoutPage() {
     if (form.deliveryType === "delivery" && !form.address.trim()) {
       newErrors.address = "Piegādes adrese ir obligāta";
     }
+    if (!form.consent) {
+      newErrors.consent = "Lūdzu apstipriniet datu apstrādes noteikumus";
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
 
-    const order = addOrder({
-      items,
-      totalPrice,
-      phone: form.phone,
-      customerName: form.customerName,
-      address:
-        form.deliveryType === "delivery"
-          ? form.address
-          : "Blaumaņa iela 34-2, Rīga (paņemšana)",
-      deliveryType: form.deliveryType,
-      deliveryTime: form.deliveryTime,
-    });
+    if (!actor) {
+      toast.error("Neizdevās nosūtīt pasūtījumu. Mēģiniet vēlreiz.");
+      return;
+    }
 
-    setSuccessModal({ open: true, orderNumber: order.orderNumber });
+    setSubmitting(true);
+    try {
+      // 1. Build order input with exact backend field names
+      const orderInput = {
+        items: items.map((i) => ({
+          productId: BigInt(i.productId),
+          name: i.name,
+          price: i.price,
+          quantity: BigInt(i.quantity),
+        })),
+        totalPrice: totalPrice,
+        phone: form.phone,
+        customerName: form.customerName,
+        address:
+          form.deliveryType === "delivery"
+            ? form.address
+            : "Blaumaņa iela 34-2, Rīga (saņemšana uz vietas)",
+        deliveryType: form.deliveryType,
+        deliveryTime: form.deliveryTime || "ASAP",
+      };
+
+      // 2. Save to backend (persistent storage)
+      const savedOrder = await actor.submitOrder(orderInput);
+
+      // 3. Show success modal — cart cleared ONLY after modal close
+      setSuccessModal({
+        open: true,
+        orderNumber: Number(savedOrder.orderNumber),
+      });
+    } catch {
+      toast.error("Neizdevās nosūtīt pasūtījumu. Mēģiniet vēlreiz.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  // Redirect to cart if empty (but NOT after successful order — modal handles that)
+  // Show a loading placeholder when cart is transitioning to empty
   if (items.length === 0 && !successModal.open) {
-    return (
-      <div
-        className="min-h-screen flex flex-col items-center justify-center pt-16"
-        style={{ background: "#1b1412" }}
-      >
-        <p className="text-lg mb-6" style={{ color: "#a0967a" }}>
-          Grozs ir tukšs
-        </p>
-        <Link
-          to="/menu"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold tracking-widest uppercase transition-all hover:brightness-110"
-          style={{ background: "#d4af37", color: "#1b1412" }}
-        >
-          <ArrowLeft size={16} />
-          Uz ēdienkarti
-        </Link>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -124,14 +153,15 @@ export function CheckoutPage() {
           }}
         />
         <div className="max-w-4xl mx-auto">
-          <Link
-            to="/cart"
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/cart" })}
             className="inline-flex items-center gap-2 text-sm mb-4 transition-colors hover:text-[#d4af37]"
             style={{ color: "#a0967a" }}
           >
             <ArrowLeft size={15} />
             Atpakaļ uz grozu
-          </Link>
+          </button>
           <motion.h1
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -143,7 +173,7 @@ export function CheckoutPage() {
         </div>
       </div>
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-8 pb-24">
+      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-8 pb-32">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Form */}
           <div className="lg:col-span-2">
@@ -159,7 +189,7 @@ export function CheckoutPage() {
                   className="block text-sm font-semibold mb-3 tracking-wide"
                   style={{ color: "#f5f5f5" }}
                 >
-                  Piegādes veids *
+                  Saņemšanas veids *
                 </p>
                 <div
                   data-ocid="checkout.delivery_select"
@@ -342,7 +372,7 @@ export function CheckoutPage() {
                 </motion.div>
               )}
 
-              {/* Delivery time */}
+              {/* Delivery time — dropdown */}
               <div>
                 <label
                   htmlFor="deliveryTime"
@@ -351,17 +381,45 @@ export function CheckoutPage() {
                 >
                   <span className="flex items-center gap-2">
                     <Clock size={14} />
-                    Vēlamais laiks (nav obligāts)
+                    Vēlamais laiks
                   </span>
                 </label>
-                <input
+                <select
                   id="deliveryTime"
-                  type="text"
-                  data-ocid="checkout.time_input"
+                  data-ocid="checkout.time_select"
                   value={form.deliveryTime}
                   onChange={(e) => update("deliveryTime", e.target.value)}
-                  placeholder="piem. 14:00 vai Pēc iespējas ātrāk"
-                  className="w-full px-4 py-3 rounded-xl text-sm transition-all outline-none"
+                  className="w-full px-4 py-3 rounded-xl text-sm outline-none appearance-none cursor-pointer"
+                  style={{
+                    background: "#241b17",
+                    border: "1px solid #3a2e28",
+                    color: form.deliveryTime ? "#f5f5f5" : "#a0967a",
+                  }}
+                >
+                  <option value="">Pēc iespējas ātrāk (ASAP)</option>
+                  <option value="+30 min">+30 minūtes</option>
+                  <option value="+60 min">+60 minūtes</option>
+                  <option value="Šodien 18:00–22:00">Šodien 18:00–22:00</option>
+                </select>
+              </div>
+
+              {/* Comment */}
+              <div>
+                <label
+                  htmlFor="comment"
+                  className="block text-sm font-semibold mb-2 tracking-wide"
+                  style={{ color: "#f5f5f5" }}
+                >
+                  Komentārs (neobligāts)
+                </label>
+                <textarea
+                  id="comment"
+                  data-ocid="checkout.comment_textarea"
+                  value={form.comment}
+                  onChange={(e) => update("comment", e.target.value)}
+                  placeholder="Īpašas vēlmes vai papildu informācija..."
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none"
                   style={{
                     background: "#241b17",
                     border: "1px solid #3a2e28",
@@ -370,14 +428,47 @@ export function CheckoutPage() {
                 />
               </div>
 
+              {/* Consent checkbox */}
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="consent"
+                  data-ocid="checkout.consent_checkbox"
+                  checked={form.consent}
+                  onChange={(e) => update("consent", e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded cursor-pointer"
+                  style={{ accentColor: "#d4af37" }}
+                />
+                <div>
+                  <label
+                    htmlFor="consent"
+                    className="text-sm leading-relaxed cursor-pointer"
+                    style={{ color: "#a0967a" }}
+                  >
+                    Piekrītu datu apstrādes noteikumiem un apstiprinu, ka
+                    sniegtā informācija ir pareiza.
+                  </label>
+                  {errors.consent && (
+                    <p
+                      className="mt-1 text-xs"
+                      style={{ color: "#c0392b" }}
+                      data-ocid="checkout.consent_error"
+                    >
+                      {errors.consent}
+                    </p>
+                  )}
+                </div>
+              </div>
+
               {/* Submit */}
               <button
                 type="submit"
                 data-ocid="checkout.submit_button"
-                className="w-full py-4 rounded-xl text-sm font-bold tracking-widest uppercase transition-all hover:brightness-110 active:scale-[0.98]"
+                disabled={submitting}
+                className="w-full py-4 rounded-xl text-sm font-bold tracking-widest uppercase transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{ background: "#d4af37", color: "#1b1412" }}
               >
-                Nosūtīt pasūtījumu
+                {submitting ? "Apstrādā..." : "NOSŪTĪT PASŪTĪJUMU"}
               </button>
             </motion.form>
           </div>
@@ -445,6 +536,9 @@ export function CheckoutPage() {
                     €
                   </span>
                 </div>
+                <p className="text-xs mt-1" style={{ color: "#7a6e5a" }}>
+                  Bez piegādes maksas
+                </p>
               </div>
             </motion.div>
           </div>
@@ -452,6 +546,7 @@ export function CheckoutPage() {
       </main>
 
       <Footer />
+      <StickyCartBar />
 
       <OrderSuccessModal
         isOpen={successModal.open}

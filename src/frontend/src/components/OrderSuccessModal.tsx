@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowRight, CheckCircle2, Home } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCartStore } from "../store/useStore";
 
@@ -17,10 +17,10 @@ export function OrderSuccessModal({
   const navigate = useNavigate();
   const clearCart = useCartStore((s) => s.clearCart);
 
-  const handleClose = (destination: "/menu" | "/home") => {
+  const handleClose = () => {
     onClose();
     clearCart();
-    navigate({ to: destination });
+    navigate({ to: "/menu" });
   };
 
   return (
@@ -34,10 +34,9 @@ export function OrderSuccessModal({
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50"
             style={{
-              background: "rgba(0,0,0,0.75)",
+              background: "rgba(0,0,0,0.8)",
               backdropFilter: "blur(4px)",
             }}
-            onClick={() => handleClose("/home")}
           />
 
           {/* Modal */}
@@ -62,14 +61,14 @@ export function OrderSuccessModal({
                 className="absolute top-0 left-0 w-16 h-16"
                 style={{
                   background:
-                    "linear-gradient(135deg, rgba(212,175,55,0.12) 0%, transparent 70%)",
+                    "linear-gradient(135deg, rgba(76,175,80,0.12) 0%, transparent 70%)",
                 }}
               />
               <div
                 className="absolute bottom-0 right-0 w-16 h-16"
                 style={{
                   background:
-                    "linear-gradient(315deg, rgba(212,175,55,0.12) 0%, transparent 70%)",
+                    "linear-gradient(315deg, rgba(76,175,80,0.12) 0%, transparent 70%)",
                 }}
               />
 
@@ -88,8 +87,8 @@ export function OrderSuccessModal({
                 <div
                   className="w-20 h-20 rounded-full flex items-center justify-center"
                   style={{
-                    background: "rgba(34, 139, 34, 0.12)",
-                    border: "2px solid rgba(34, 139, 34, 0.4)",
+                    background: "rgba(76, 175, 80, 0.12)",
+                    border: "2px solid rgba(76, 175, 80, 0.4)",
                   }}
                 >
                   <CheckCircle2 size={40} color="#4caf50" />
@@ -104,9 +103,9 @@ export function OrderSuccessModal({
               >
                 <h2
                   className="font-display text-2xl font-bold mb-4"
-                  style={{ color: "#f5f5f5" }}
+                  style={{ color: "#4caf50" }}
                 >
-                  Pasūtījums pieņemts!
+                  Pasūtījums pieņemts
                 </h2>
 
                 <p
@@ -131,37 +130,20 @@ export function OrderSuccessModal({
                   className="mx-auto w-16 h-px mb-8"
                   style={{
                     background:
-                      "linear-gradient(90deg, transparent, #d4af37, transparent)",
+                      "linear-gradient(90deg, transparent, #4caf50, transparent)",
                   }}
                 />
 
-                {/* Action buttons */}
-                <div className="space-y-3">
-                  <button
-                    type="button"
-                    data-ocid="success.menu_button"
-                    onClick={() => handleClose("/menu")}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold tracking-widest uppercase transition-all hover:brightness-110 active:scale-[0.98]"
-                    style={{ background: "#d4af37", color: "#1b1412" }}
-                  >
-                    Turpināt skatīt piedāvājumus
-                    <ArrowRight size={15} />
-                  </button>
-
-                  <button
-                    type="button"
-                    data-ocid="success.home_button"
-                    onClick={() => handleClose("/home")}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium tracking-wide transition-all hover:bg-[#3a2e28]"
-                    style={{
-                      border: "1px solid #3a2e28",
-                      color: "#a0967a",
-                    }}
-                  >
-                    <Home size={15} />
-                    Atgriezties uz sākumu
-                  </button>
-                </div>
+                {/* Single Labi button */}
+                <button
+                  type="button"
+                  data-ocid="success.close_button"
+                  onClick={handleClose}
+                  className="w-full py-3 rounded-xl text-sm font-bold tracking-widest uppercase transition-all hover:brightness-110 active:scale-[0.98]"
+                  style={{ background: "#d4af37", color: "#1b1412" }}
+                >
+                  Labi
+                </button>
               </motion.div>
             </div>
           </motion.div>

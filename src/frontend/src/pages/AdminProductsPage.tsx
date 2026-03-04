@@ -1,18 +1,23 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Edit2,
   LogOut,
   Package,
   Plus,
+  RefreshCw,
   ShoppingCart,
   Upload,
   X,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { Switch } from "../components/ui/switch";
+import { useActor } from "../hooks/useActor";
+import { useStorageClient } from "../hooks/useStorageClient";
 import type { Product, ProductCategory } from "../store/types";
-import { useAdminStore, useProductsStore } from "../store/useStore";
+import { useAdminStore } from "../store/useStore";
 
 const CATEGORY_LABELS: Record<ProductCategory, string> = {
   set: "Set",
@@ -29,7 +34,6 @@ interface ProductFormData {
   peopleRecommended: string;
   category: ProductCategory;
   image: string;
-  enabled: boolean;
 }
 
 const EMPTY_FORM: ProductFormData = {
@@ -39,17 +43,23 @@ const EMPTY_FORM: ProductFormData = {
   peopleRecommended: "",
   category: "set",
   image: "",
-  enabled: true,
 };
 
 function ProductModal({
   product,
   onClose,
   onSave,
+  saving,
+  uploadImage,
 }: {
   product: Product | null;
   onClose: () => void;
-  onSave: (data: ProductFormData, id?: number) => void;
+  onSave: (data: ProductFormData, id?: number) => Promise<void>;
+  saving: boolean;
+  uploadImage: (
+    file: File,
+    onProgress?: (pct: number) => void,
+  ) => Promise<string>;
 }) {
   const [form, setForm] = useState<ProductFormData>(
     product
@@ -60,25 +70,42 @@ function ProductModal({
           peopleRecommended: product.peopleRecommended,
           category: product.category,
           image: product.image,
-          enabled: product.enabled,
         }
       : EMPTY_FORM,
   );
   const [error, setError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target?.result as string;
-      setForm((prev) => ({ ...prev, image: result }));
-    };
-    reader.readAsDataURL(file);
+
+    // Show a local preview immediately while upload happens
+    const localPreview = URL.createObjectURL(file);
+    setForm((prev) => ({ ...prev, image: localPreview }));
+
+    setUploading(true);
+    setUploadProgress(0);
+    try {
+      const imageUrl = await uploadImage(file, (pct) => setUploadProgress(pct));
+      // Replace local preview with the persisted blob storage URL
+      setForm((prev) => ({ ...prev, image: imageUrl }));
+      URL.revokeObjectURL(localPreview);
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      toast.error("Image upload failed. Please try again.");
+      // Revert preview on failure
+      setForm((prev) => ({ ...prev, image: product?.image ?? "" }));
+      URL.revokeObjectURL(localPreview);
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) {
       setError("Name is required");
       return;
@@ -88,7 +115,12 @@ function ProductModal({
       setError("Valid price is required");
       return;
     }
-    onSave(form, product?.id);
+    if (uploading) {
+      setError("Please wait for the image upload to finish.");
+      return;
+    }
+    setError("");
+    await onSave(form, product?.id);
     onClose();
   };
 
@@ -129,29 +161,49 @@ function ProductModal({
               type="button"
               className="w-full h-40 rounded-xl overflow-hidden relative cursor-pointer group"
               style={{ border: "1px dashed #3a2e28" }}
-              onClick={() => fileRef.current?.click()}
+              onClick={() => !uploading && fileRef.current?.click()}
               aria-label="Upload product image"
+              data-ocid="admin.upload_button"
+              disabled={uploading}
             >
               <img
                 src={form.image || PLACEHOLDER}
                 alt="Product preview"
                 className="w-full h-full object-cover"
               />
-              <div
-                className="absolute inset-0 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                style={{ background: "rgba(0,0,0,0.6)" }}
-              >
-                <Upload size={20} style={{ color: "#d4af37" }} />
-                <span className="text-xs" style={{ color: "#d4af37" }}>
-                  Upload image
-                </span>
-              </div>
+              {uploading ? (
+                <div
+                  className="absolute inset-0 flex flex-col items-center justify-center gap-2"
+                  style={{ background: "rgba(0,0,0,0.65)" }}
+                >
+                  <RefreshCw
+                    size={20}
+                    className="animate-spin"
+                    style={{ color: "#d4af37" }}
+                  />
+                  <span
+                    className="text-xs font-semibold"
+                    style={{ color: "#d4af37" }}
+                  >
+                    Uploading {uploadProgress}%
+                  </span>
+                </div>
+              ) : (
+                <div
+                  className="absolute inset-0 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ background: "rgba(0,0,0,0.6)" }}
+                >
+                  <Upload size={20} style={{ color: "#d4af37" }} />
+                  <span className="text-xs" style={{ color: "#d4af37" }}>
+                    Upload image
+                  </span>
+                </div>
+              )}
             </button>
             <input
               ref={fileRef}
               id="product-image-upload"
               type="file"
-              data-ocid="admin.product_upload_button"
               accept="image/*"
               className="hidden"
               onChange={handleImageUpload}
@@ -294,22 +346,6 @@ function ProductModal({
             />
           </div>
 
-          {/* Enabled */}
-          <div className="flex items-center justify-between">
-            <label
-              htmlFor="modal-enabled"
-              className="text-sm"
-              style={{ color: "#a0967a" }}
-            >
-              Enabled on menu
-            </label>
-            <Switch
-              id="modal-enabled"
-              checked={form.enabled}
-              onCheckedChange={(v) => setForm((p) => ({ ...p, enabled: v }))}
-            />
-          </div>
-
           {error && (
             <p className="text-xs" style={{ color: "#c0392b" }}>
               {error}
@@ -320,7 +356,8 @@ function ProductModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all hover:bg-[#3a2e28]"
+              disabled={saving}
+              className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all hover:bg-[#3a2e28] disabled:opacity-50"
               style={{ border: "1px solid #3a2e28", color: "#a0967a" }}
             >
               Cancel
@@ -328,10 +365,12 @@ function ProductModal({
             <button
               type="button"
               onClick={handleSave}
-              className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all hover:brightness-110"
+              disabled={saving}
+              className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2"
               style={{ background: "#d4af37", color: "#1b1412" }}
             >
-              Save
+              {saving && <RefreshCw size={14} className="animate-spin" />}
+              {saving ? "Saving..." : "Save"}
             </button>
           </div>
         </div>
@@ -344,45 +383,86 @@ export function AdminProductsPage() {
   const navigate = useNavigate();
   const isAdmin = useAdminStore((s) => s.isAdmin);
   const logout = useAdminStore((s) => s.logout);
-  const products = useProductsStore((s) => s.products);
-  const updateProduct = useProductsStore((s) => s.updateProduct);
-  const addProduct = useProductsStore((s) => s.addProduct);
-  const toggleProduct = useProductsStore((s) => s.toggleProduct);
+  const { actor } = useActor();
+  const { uploadImage } = useStorageClient();
+  const queryClient = useQueryClient();
 
   const [editProduct, setEditProduct] = useState<Product | null | undefined>(
     undefined,
   );
+  const [savingProduct, setSavingProduct] = useState(false);
+
+  const { data: products = [], isLoading } = useQuery<Product[]>({
+    queryKey: ["admin-products"],
+    queryFn: async () => {
+      if (!actor) return [];
+      const raw = await actor.getAllProducts();
+      return raw.map((p) => ({
+        id: Number(p.id),
+        name: p.name,
+        price: Number(p.price),
+        image: p.image,
+        pieceCount: p.pieceCount,
+        peopleRecommended: p.peopleRecommended,
+        category: p.category as ProductCategory,
+        enabled: p.enabled,
+      }));
+    },
+    enabled: !!actor && isAdmin,
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async (productId: number) => {
+      if (!actor) throw new Error("No actor");
+      await actor.toggleProductEnabled(BigInt(productId));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+    onError: () => {
+      toast.error("Failed to update product");
+    },
+  });
 
   if (!isAdmin) {
     navigate({ to: "/admin" });
     return null;
   }
 
-  const handleSave = (data: ProductFormData, id?: number) => {
+  const handleSave = async (data: ProductFormData, id?: number) => {
+    if (!actor) return;
     const price = Number.parseFloat(data.price);
-    if (id !== undefined) {
-      updateProduct({
-        id,
-        name: data.name,
-        price,
-        pieceCount: data.pieceCount,
-        peopleRecommended: data.peopleRecommended,
-        category: data.category,
-        image: data.image,
-        enabled: data.enabled,
-      });
-    } else {
-      const maxId = products.reduce((m, p) => Math.max(m, p.id), 0);
-      addProduct({
-        id: maxId + 1,
-        name: data.name,
-        price,
-        pieceCount: data.pieceCount,
-        peopleRecommended: data.peopleRecommended,
-        category: data.category,
-        image: data.image,
-        enabled: data.enabled,
-      });
+    setSavingProduct(true);
+    try {
+      if (id !== undefined) {
+        await actor.updateProduct(
+          BigInt(id),
+          data.name,
+          price,
+          data.image,
+          data.pieceCount,
+          data.peopleRecommended,
+          data.category,
+        );
+        toast.success("Product updated");
+      } else {
+        await actor.addProduct(
+          data.name,
+          price,
+          data.image,
+          data.pieceCount,
+          data.peopleRecommended,
+          data.category,
+        );
+        toast.success("Product added");
+      }
+      await queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      await queryClient.invalidateQueries({ queryKey: ["products"] });
+    } catch {
+      toast.error("Failed to save product");
+    } finally {
+      setSavingProduct(false);
     }
   };
 
@@ -447,7 +527,7 @@ export function AdminProductsPage() {
               Products
             </h1>
             <p className="text-sm mt-1" style={{ color: "#7a6e5a" }}>
-              {products.length} products total
+              {isLoading ? "Loading..." : `${products.length} products total`}
             </p>
           </div>
           <button
@@ -462,146 +542,165 @@ export function AdminProductsPage() {
           </button>
         </div>
 
+        {/* Loading state */}
+        {isLoading && (
+          <div
+            className="flex items-center justify-center py-20"
+            data-ocid="admin.products_loading_state"
+          >
+            <RefreshCw
+              size={28}
+              className="animate-spin"
+              style={{ color: "#3a2e28" }}
+            />
+          </div>
+        )}
+
         {/* Products table */}
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{ border: "1px solid #3a2e28" }}
-        >
-          <table className="w-full">
-            <thead>
-              <tr
-                style={{
-                  background: "#241b17",
-                  borderBottom: "1px solid #3a2e28",
-                }}
-              >
-                <th
-                  className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: "#a0967a" }}
-                >
-                  Product
-                </th>
-                <th
-                  className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider hidden sm:table-cell"
-                  style={{ color: "#a0967a" }}
-                >
-                  Category
-                </th>
-                <th
-                  className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider hidden sm:table-cell"
-                  style={{ color: "#a0967a" }}
-                >
-                  Price
-                </th>
-                <th
-                  className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider hidden md:table-cell"
-                  style={{ color: "#a0967a" }}
-                >
-                  Pieces
-                </th>
-                <th
-                  className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: "#a0967a" }}
-                >
-                  Enabled
-                </th>
-                <th
-                  className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: "#a0967a" }}
-                >
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((product, i) => (
+        {!isLoading && products.length > 0 && (
+          <div
+            className="rounded-xl overflow-hidden"
+            style={{ border: "1px solid #3a2e28" }}
+          >
+            <table className="w-full">
+              <thead>
                 <tr
-                  key={product.id}
                   style={{
-                    borderBottom:
-                      i < products.length - 1 ? "1px solid #3a2e28" : "none",
-                    background: "#1b1412",
+                    background: "#241b17",
+                    borderBottom: "1px solid #3a2e28",
                   }}
                 >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-8 rounded overflow-hidden flex-shrink-0">
-                        <img
-                          src={product.image || PLACEHOLDER}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div>
-                        <p
-                          className="text-sm font-medium"
-                          style={{ color: "#f5f5f5" }}
-                        >
-                          {product.name}
-                        </p>
-                        <p
-                          className="text-xs sm:hidden"
-                          style={{ color: "#a0967a" }}
-                        >
-                          {CATEGORY_LABELS[product.category]} ·{" "}
-                          {product.price % 1 === 0
-                            ? product.price
-                            : product.price.toFixed(2)}{" "}
-                          €
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 hidden sm:table-cell">
-                    <span
-                      className="inline-block px-2 py-0.5 rounded text-xs font-medium"
-                      style={{
-                        background: "rgba(212,175,55,0.12)",
-                        color: "#d4af37",
-                      }}
-                    >
-                      {CATEGORY_LABELS[product.category]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 hidden sm:table-cell">
-                    <span className="text-sm" style={{ color: "#f5f5f5" }}>
-                      {product.price % 1 === 0
-                        ? product.price
-                        : product.price.toFixed(2)}{" "}
-                      €
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
-                    <span className="text-sm" style={{ color: "#a0967a" }}>
-                      {product.pieceCount}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <Switch
-                      data-ocid={`admin.product_toggle.${i + 1}`}
-                      checked={product.enabled}
-                      onCheckedChange={() => toggleProduct(product.id)}
-                    />
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      data-ocid={`admin.product_edit_button.${i + 1}`}
-                      onClick={() => setEditProduct(product)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:bg-[#3a2e28]"
-                      style={{ color: "#a0967a" }}
-                    >
-                      <Edit2 size={13} />
-                      Edit
-                    </button>
-                  </td>
+                  <th
+                    className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider"
+                    style={{ color: "#a0967a" }}
+                  >
+                    Product
+                  </th>
+                  <th
+                    className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider hidden sm:table-cell"
+                    style={{ color: "#a0967a" }}
+                  >
+                    Category
+                  </th>
+                  <th
+                    className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider hidden sm:table-cell"
+                    style={{ color: "#a0967a" }}
+                  >
+                    Price
+                  </th>
+                  <th
+                    className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider hidden md:table-cell"
+                    style={{ color: "#a0967a" }}
+                  >
+                    Pieces
+                  </th>
+                  <th
+                    className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider"
+                    style={{ color: "#a0967a" }}
+                  >
+                    Enabled
+                  </th>
+                  <th
+                    className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider"
+                    style={{ color: "#a0967a" }}
+                  >
+                    Actions
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {products.map((product, i) => (
+                  <tr
+                    key={product.id}
+                    style={{
+                      borderBottom:
+                        i < products.length - 1 ? "1px solid #3a2e28" : "none",
+                      background: "#1b1412",
+                    }}
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-8 rounded overflow-hidden flex-shrink-0">
+                          <img
+                            src={product.image || PLACEHOLDER}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div>
+                          <p
+                            className="text-sm font-medium"
+                            style={{ color: "#f5f5f5" }}
+                          >
+                            {product.name}
+                          </p>
+                          <p
+                            className="text-xs sm:hidden"
+                            style={{ color: "#a0967a" }}
+                          >
+                            {CATEGORY_LABELS[product.category]} ·{" "}
+                            {product.price % 1 === 0
+                              ? product.price
+                              : product.price.toFixed(2)}{" "}
+                            €
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 hidden sm:table-cell">
+                      <span
+                        className="inline-block px-2 py-0.5 rounded text-xs font-medium"
+                        style={{
+                          background: "rgba(212,175,55,0.12)",
+                          color: "#d4af37",
+                        }}
+                      >
+                        {CATEGORY_LABELS[product.category]}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 hidden sm:table-cell">
+                      <span className="text-sm" style={{ color: "#f5f5f5" }}>
+                        {product.price % 1 === 0
+                          ? product.price
+                          : product.price.toFixed(2)}{" "}
+                        €
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      <span className="text-sm" style={{ color: "#a0967a" }}>
+                        {product.pieceCount}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <Switch
+                        data-ocid={`admin.product_toggle.${i + 1}`}
+                        checked={product.enabled}
+                        disabled={toggleMutation.isPending}
+                        onCheckedChange={() =>
+                          toggleMutation.mutate(product.id)
+                        }
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        data-ocid={`admin.product_edit_button.${i + 1}`}
+                        onClick={() => setEditProduct(product)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:bg-[#3a2e28]"
+                        style={{ color: "#a0967a" }}
+                      >
+                        <Edit2 size={13} />
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-        {products.length === 0 && (
+        {!isLoading && products.length === 0 && (
           <div
             className="flex flex-col items-center justify-center py-20 text-center"
             data-ocid="admin.products_empty_state"
@@ -620,6 +719,8 @@ export function AdminProductsPage() {
           product={editProduct}
           onClose={() => setEditProduct(undefined)}
           onSave={handleSave}
+          saving={savingProduct}
+          uploadImage={uploadImage}
         />
       )}
     </div>
