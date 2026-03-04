@@ -1,11 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
+import { useEffect, useRef } from "react";
 import { Footer } from "../components/Footer";
 import { ProductCard } from "../components/ProductCard";
 import { StickyCartBar } from "../components/StickyCartBar";
 import { Skeleton } from "../components/ui/skeleton";
 import { useActor } from "../hooks/useActor";
 import type { Product, ProductCategory } from "../store/types";
+import { seedIfEmpty } from "../utils/seedProducts";
 
 const categoryConfig: Record<
   ProductCategory,
@@ -54,6 +56,8 @@ function ProductCardSkeleton() {
 
 export function MenuPage() {
   const { actor, isFetching: actorFetching } = useActor();
+  const queryClient = useQueryClient();
+  const seededRef = useRef(false);
 
   const { data: products = [], isLoading } = useQuery<Product[]>({
     queryKey: ["products"],
@@ -73,6 +77,19 @@ export function MenuPage() {
     },
     enabled: !!actor && !actorFetching,
   });
+
+  // If products storage is empty, seed initial data and reload
+  useEffect(() => {
+    if (!actor || actorFetching || isLoading || seededRef.current) return;
+    if (products.length === 0) {
+      seededRef.current = true;
+      seedIfEmpty(actor).then((didSeed) => {
+        if (didSeed) {
+          queryClient.invalidateQueries({ queryKey: ["products"] });
+        }
+      });
+    }
+  }, [actor, actorFetching, isLoading, products.length, queryClient]);
 
   const loading = isLoading || actorFetching;
 

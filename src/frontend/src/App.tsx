@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-router";
 import { Header } from "./components/Header";
 import { Toaster } from "./components/ui/sonner";
+import { useProductSeed } from "./hooks/useProductSeed";
 import { AdminLoginPage } from "./pages/AdminLoginPage";
 import { AdminOrdersPage } from "./pages/AdminOrdersPage";
 import { AdminProductsPage } from "./pages/AdminProductsPage";
@@ -15,6 +16,12 @@ import { CartPage } from "./pages/CartPage";
 import { CheckoutPage } from "./pages/CheckoutPage";
 import { HomePage } from "./pages/HomePage";
 import { MenuPage } from "./pages/MenuPage";
+
+// ── Seed initializer — runs once when actor is ready ─────────
+function SeedInitializer() {
+  useProductSeed();
+  return null;
+}
 
 // ── Customer layout ──────────────────────────────────────────
 function CustomerLayout() {
@@ -30,6 +37,8 @@ function CustomerLayout() {
 const rootRoute = createRootRoute({
   component: () => (
     <>
+      {/* Silently ensures products are seeded on the backend if missing */}
+      <SeedInitializer />
       <Outlet />
       <Toaster
         position="bottom-center"

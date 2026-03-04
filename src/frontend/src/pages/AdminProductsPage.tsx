@@ -11,13 +11,14 @@ import {
   X,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Switch } from "../components/ui/switch";
 import { useActor } from "../hooks/useActor";
 import { useStorageClient } from "../hooks/useStorageClient";
 import type { Product, ProductCategory } from "../store/types";
 import { useAdminStore } from "../store/useStore";
+import { seedIfEmpty } from "../utils/seedProducts";
 
 const CATEGORY_LABELS: Record<ProductCategory, string> = {
   set: "Set",
@@ -391,6 +392,7 @@ export function AdminProductsPage() {
     undefined,
   );
   const [savingProduct, setSavingProduct] = useState(false);
+  const seededRef = useRef(false);
 
   const { data: products = [], isLoading } = useQuery<Product[]>({
     queryKey: ["admin-products"],
@@ -410,6 +412,20 @@ export function AdminProductsPage() {
     },
     enabled: !!actor && isAdmin,
   });
+
+  // Seed initial products if storage is empty
+  useEffect(() => {
+    if (!actor || !isAdmin || isLoading || seededRef.current) return;
+    if (products.length === 0) {
+      seededRef.current = true;
+      seedIfEmpty(actor).then((didSeed) => {
+        if (didSeed) {
+          queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+          queryClient.invalidateQueries({ queryKey: ["products"] });
+        }
+      });
+    }
+  }, [actor, isAdmin, isLoading, products.length, queryClient]);
 
   const toggleMutation = useMutation({
     mutationFn: async (productId: number) => {
