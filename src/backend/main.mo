@@ -47,11 +47,11 @@ actor {
 
   // ── State ─────────────────────────────────────────────────────────────────
 
-  var products      : [Product] = [];
-  var orders        : [Order]   = [];
-  var nextProductId : Nat       = 1;
-  var nextOrderNum  : Nat       = 1;
-  var seeded        : Bool      = false;
+  stable var products      : [Product] = [];
+  stable var orders        : [Order]   = [];
+  stable var nextProductId : Nat       = 1;
+  stable var nextOrderNum  : Nat       = 100;
+  stable var seeded        : Bool      = false;
 
   // ── Seed ──────────────────────────────────────────────────────────────────
 
