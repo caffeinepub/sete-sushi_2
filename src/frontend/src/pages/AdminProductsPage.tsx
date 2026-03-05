@@ -31,8 +31,8 @@ const PLACEHOLDER = "/assets/generated/sushi-roll-placeholder.dim_600x400.jpg";
 interface ProductFormData {
   name: string;
   price: string;
+  description: string; // maps to peopleRecommended in backend
   pieceCount: string;
-  peopleRecommended: string;
   category: ProductCategory;
   image: string;
 }
@@ -40,8 +40,8 @@ interface ProductFormData {
 const EMPTY_FORM: ProductFormData = {
   name: "",
   price: "",
+  description: "",
   pieceCount: "",
-  peopleRecommended: "",
   category: "set",
   image: "",
 };
@@ -67,8 +67,8 @@ function ProductModal({
       ? {
           name: product.name,
           price: String(product.price),
+          description: product.peopleRecommended, // backend peopleRecommended is our description
           pieceCount: product.pieceCount,
-          peopleRecommended: product.peopleRecommended,
           category: product.category,
           image: product.image,
         }
@@ -321,21 +321,21 @@ function ProductModal({
             </div>
           </div>
 
-          {/* Recommended */}
+          {/* Description (maps to peopleRecommended in backend) */}
           <div>
             <label
-              htmlFor="modal-recommended"
+              htmlFor="modal-description"
               className="block text-xs font-semibold mb-1.5 uppercase tracking-wider"
               style={{ color: "#a0967a" }}
             >
-              People Recommended
+              Apraksts
             </label>
             <input
-              id="modal-recommended"
+              id="modal-description"
               type="text"
-              value={form.peopleRecommended}
+              value={form.description}
               onChange={(e) =>
-                setForm((p) => ({ ...p, peopleRecommended: e.target.value }))
+                setForm((p) => ({ ...p, description: e.target.value }))
               }
               className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
               style={{
@@ -343,7 +343,7 @@ function ProductModal({
                 border: "1px solid #3a2e28",
                 color: "#f5f5f5",
               }}
-              placeholder="Ideāli 2–3 cilvēkiem"
+              placeholder="Sushi komplekts"
             />
           </div>
 
@@ -406,6 +406,7 @@ export function AdminProductsPage() {
         image: p.image,
         pieceCount: p.pieceCount,
         peopleRecommended: p.peopleRecommended,
+        description: p.peopleRecommended, // derive description from peopleRecommended
         category: p.category as ProductCategory,
         enabled: p.enabled,
       }));
@@ -458,23 +459,25 @@ export function AdminProductsPage() {
     setSavingProduct(true);
     try {
       if (id !== undefined) {
+        // updateProduct(id, name, price, image, pieceCount, peopleRecommended, category)
         await actor.updateProduct(
           BigInt(id),
           data.name,
           price,
           data.image,
           data.pieceCount,
-          data.peopleRecommended,
+          data.description, // description maps to peopleRecommended in backend
           data.category,
         );
         toast.success("Product updated");
       } else {
+        // addProduct(name, price, image, pieceCount, peopleRecommended, category)
         await actor.addProduct(
           data.name,
           price,
           data.image,
           data.pieceCount,
-          data.peopleRecommended,
+          data.description, // description maps to peopleRecommended in backend
           data.category,
         );
         toast.success("Product added");

@@ -30,26 +30,26 @@ const SEED_PRODUCTS: SeedProduct[] = [
   // Sets
   {
     name: "SETE 01",
-    price: 39,
+    price: 25,
     image: "",
-    pieceCount: "48 gab",
-    peopleRecommended: "Ideāli 2–3 personām",
+    pieceCount: "",
+    peopleRecommended: "Sushi komplekts",
     category: "set",
   },
   {
     name: "SETE 02",
-    price: 42,
+    price: 32,
     image: "",
-    pieceCount: "64 gab",
-    peopleRecommended: "Ideāli 3–4 personām",
+    pieceCount: "",
+    peopleRecommended: "Sushi komplekts",
     category: "set",
   },
   {
     name: "SETE 04",
     price: 45,
     image: "",
-    pieceCount: "48 gab",
-    peopleRecommended: "Ideāli 2–3 personām",
+    pieceCount: "",
+    peopleRecommended: "Sushi komplekts",
     category: "set",
   },
   // Addons
@@ -58,7 +58,7 @@ const SEED_PRODUCTS: SeedProduct[] = [
     price: 9,
     image: "",
     pieceCount: "8 gab",
-    peopleRecommended: "Pielikums",
+    peopleRecommended: "Sushi rullītis",
     category: "addon",
   },
   // Drinks

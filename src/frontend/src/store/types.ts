@@ -9,6 +9,7 @@ export interface Product {
   peopleRecommended: string;
   category: ProductCategory;
   enabled: boolean;
+  description?: string; // derived from peopleRecommended for display
 }
 
 export interface CartItem {

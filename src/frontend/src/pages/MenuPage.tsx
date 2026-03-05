@@ -101,6 +101,7 @@ export function MenuPage() {
         image: p.image,
         pieceCount: p.pieceCount,
         peopleRecommended: p.peopleRecommended,
+        description: p.peopleRecommended, // derive description for display
         category: p.category as ProductCategory,
         enabled: p.enabled,
       }));

@@ -85,12 +85,18 @@ export function ProductCard({ product, index, onSetAdded }: ProductCardProps) {
         </h3>
 
         <div className="flex flex-col gap-0.5 mb-4">
-          <span className="text-sm" style={{ color: "#a0967a" }}>
-            {product.pieceCount}
-          </span>
-          <span className="text-xs" style={{ color: "#7a6e5a" }}>
-            {product.peopleRecommended}
-          </span>
+          {/* Description line: show description (derived from peopleRecommended) */}
+          {(product.description || product.peopleRecommended) && (
+            <span className="text-sm" style={{ color: "#a0967a" }}>
+              {product.description || product.peopleRecommended}
+            </span>
+          )}
+          {/* Piece count: show if not empty */}
+          {product.pieceCount && (
+            <span className="text-xs" style={{ color: "#7a6e5a" }}>
+              {product.pieceCount}
+            </span>
+          )}
         </div>
 
         <div className="mt-auto flex items-center justify-between gap-3">

@@ -7,37 +7,42 @@ export const INITIAL_PRODUCTS = [
   // Sets
   {
     name: "SETE 01",
-    price: 39.0,
-    pieceCount: "48 gab",
-    peopleRecommended: "Ideāli 2–3 personām",
+    price: 25.0,
+    image: "",
+    pieceCount: "",
+    peopleRecommended: "Sushi komplekts",
     category: "set",
   },
   {
     name: "SETE 02",
-    price: 42.0,
-    pieceCount: "64 gab",
-    peopleRecommended: "Ideāli 3–4 personām",
+    price: 32.0,
+    image: "",
+    pieceCount: "",
+    peopleRecommended: "Sushi komplekts",
     category: "set",
   },
   {
     name: "SETE 04",
     price: 45.0,
-    pieceCount: "48 gab",
-    peopleRecommended: "Ideāli 2–3 personām",
+    image: "",
+    pieceCount: "",
+    peopleRecommended: "Sushi komplekts",
     category: "set",
   },
   // Addons
   {
     name: "Spicy Tuna Roll",
     price: 9.0,
+    image: "",
     pieceCount: "8 gab",
-    peopleRecommended: "Pielikums",
+    peopleRecommended: "Sushi rullītis",
     category: "addon",
   },
   // Drinks
   {
     name: "Pepsi",
     price: 2.5,
+    image: "",
     pieceCount: "0.5L",
     peopleRecommended: "Dzēriens",
     category: "drink",
@@ -56,7 +61,7 @@ export async function seedIfEmpty(
       await actor.addProduct(
         p.name,
         p.price,
-        "", // image will be uploaded via admin
+        p.image,
         p.pieceCount,
         p.peopleRecommended,
         p.category,

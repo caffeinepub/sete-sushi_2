@@ -55,7 +55,7 @@ actor {
 
   // ── Seed ──────────────────────────────────────────────────────────────────
 
-  if (not seeded) {
+  if (not seeded or products.size() == 0) {
     seeded := true;
     products := [
       { id=1;  name="Veg Set";         price=27.0; image=""; pieceCount="32 gab"; peopleRecommended="Ideali 1-2 cilveekiem"; category="set";   enabled=true },
