@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, ChefHat, Leaf, Star, UtensilsCrossed } from "lucide-react";
+import { ArrowRight, ChefHat, Leaf, UtensilsCrossed } from "lucide-react";
 import { motion } from "motion/react";
 import { Footer } from "../components/Footer";
 import { StickyCartBar } from "../components/StickyCartBar";
@@ -40,62 +40,52 @@ export function HomePage() {
       className="min-h-screen flex flex-col"
       style={{ background: "#1b1412" }}
     >
-      {/* Hero Section */}
+      {/* ── Hero Section — full-bleed background image ── */}
       <section
-        className="relative flex items-center justify-center"
-        style={{ minHeight: "100svh" }}
+        className="relative flex items-center justify-center overflow-hidden"
+        style={{
+          minHeight: "100svh",
+          backgroundImage:
+            'url("/assets/generated/sushi-platter-hero.dim_900x700.jpg")',
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
       >
-        {/* Background image */}
-        <div className="absolute inset-0 overflow-hidden">
-          <img
-            src="/assets/generated/sushi-set-hero.dim_1200x800.jpg"
-            alt="Premium sushi"
-            className="w-full h-full object-cover"
-          />
-          {/* Multi-layer overlay for depth */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(180deg, rgba(27,20,18,0.55) 0%, rgba(27,20,18,0.75) 60%, rgba(27,20,18,0.97) 100%)",
-            }}
-          />
-          {/* Vignette */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.5) 100%)",
-            }}
-          />
-        </div>
-
-        {/* Decorative gold line top */}
+        {/* Dark overlay */}
         <div
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-24"
+          className="absolute inset-0"
+          style={{ background: "rgba(0,0,0,0.55)", zIndex: 0 }}
+        />
+
+        {/* Subtle warm gold radial glow */}
+        <div
+          className="absolute inset-0 pointer-events-none"
           style={{
-            background: "linear-gradient(180deg, transparent, #d4af37)",
+            background:
+              "radial-gradient(ellipse at 50% 60%, rgba(212,175,55,0.07) 0%, transparent 65%)",
+            zIndex: 1,
           }}
         />
 
-        {/* Hero content */}
-        <div className="relative z-10 text-center px-4 max-w-2xl mx-auto">
-          {/* Eyebrow */}
+        {/* Content column */}
+        <div className="relative z-10 flex flex-col items-center text-center px-6 sm:px-10 pt-24 pb-16 w-full max-w-2xl mx-auto">
+          {/* Top label pill */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="mb-6"
+            transition={{ duration: 0.6, delay: 0 }}
+            className="mb-7"
           >
             <span
-              className="inline-block text-xs font-semibold tracking-[0.4em] uppercase px-4 py-1.5 rounded-full"
+              className="inline-block text-xs font-semibold tracking-[0.4em] uppercase px-5 py-2 rounded-full"
               style={{
                 color: "#d4af37",
-                border: "1px solid rgba(212,175,55,0.35)",
-                background: "rgba(212,175,55,0.08)",
+                border: "1px solid rgba(212,175,55,0.45)",
+                background: "rgba(0,0,0,0.35)",
+                backdropFilter: "blur(8px)",
               }}
             >
-              Premium Sushi · Rīga
+              PREMIUM SUSHI · RĪGA
             </span>
           </motion.div>
 
@@ -104,23 +94,24 @@ export function HomePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.15 }}
-            className="font-display font-black leading-none mb-4"
+            className="font-display font-black leading-none mb-5"
             style={{
-              fontSize: "clamp(5rem, 18vw, 10rem)",
+              fontSize: "clamp(5rem, 20vw, 10rem)",
               color: "#d4af37",
-              textShadow: "0 4px 40px rgba(212,175,55,0.3)",
+              textShadow:
+                "0 0 60px rgba(212,175,55,0.35), 0 4px 30px rgba(0,0,0,0.6)",
               letterSpacing: "0.08em",
             }}
           >
             SETE
           </motion.h1>
 
-          {/* Divider */}
+          {/* Thin gold horizontal rule */}
           <motion.div
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
-            transition={{ duration: 0.6, delay: 0.35 }}
-            className="mx-auto mb-6 h-px w-24"
+            transition={{ duration: 0.55, delay: 0.3 }}
+            className="mb-6 h-px w-20"
             style={{
               background:
                 "linear-gradient(90deg, transparent, #d4af37, transparent)",
@@ -132,121 +123,142 @@ export function HomePage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="text-xl md:text-2xl font-light tracking-widest mb-4"
-            style={{ color: "#e8d8b4", letterSpacing: "0.3em" }}
+            className="text-lg md:text-xl font-light mb-3"
+            style={{ color: "#e8d8b4", letterSpacing: "0.22em" }}
           >
             Premium sushi Rīgā
           </motion.p>
 
-          {/* Supporting line */}
+          {/* Description */}
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.48 }}
-            className="text-sm md:text-base mb-10"
-            style={{ color: "#a0967a" }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="text-sm md:text-base mb-10 max-w-sm"
+            style={{ color: "rgba(245,245,245,0.75)", lineHeight: 1.7 }}
           >
-            Pasūti tiešsaistē. Saņem uz vietas vai piegāde uz adresi.
+            Svaigi gatavoti sushi komplekti piegādei un līdzņemšanai.
           </motion.p>
 
-          {/* CTA buttons */}
+          {/* Primary CTA with gold glow */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.55 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="mb-12"
           >
+            <style>{`
+              @keyframes goldPulse {
+                0%, 100% { box-shadow: 0 0 20px rgba(212,175,55,0.5), 0 0 40px rgba(212,175,55,0.25); }
+                50% { box-shadow: 0 0 30px rgba(212,175,55,0.7), 0 0 60px rgba(212,175,55,0.4), 0 0 80px rgba(212,175,55,0.15); }
+              }
+              .hero-cta-glow {
+                animation: goldPulse 2.8s ease-in-out infinite;
+              }
+            `}</style>
             <Link
               to="/menu"
               data-ocid="hero.order_now_button"
-              className="group inline-flex items-center gap-3 px-8 py-4 rounded-full text-sm font-semibold tracking-[0.2em] uppercase transition-all duration-300 hover:brightness-110 active:scale-95 hover:shadow-[0_0_30px_rgba(212,175,55,0.4)]"
-              style={{ background: "#d4af37", color: "#1b1412" }}
+              className="hero-cta-glow group inline-flex items-center gap-3 px-10 py-4 rounded-full text-sm font-bold tracking-[0.25em] uppercase transition-all hover:brightness-110 active:scale-95"
+              style={{
+                background: "#d4af37",
+                color: "#1b1412",
+                boxShadow:
+                  "0 0 20px rgba(212,175,55,0.5), 0 0 40px rgba(212,175,55,0.25)",
+              }}
             >
-              Pasūtīt tagad
+              PASŪTĪT TAGAD
               <ArrowRight
-                size={16}
+                size={15}
                 className="transition-transform duration-300 group-hover:translate-x-1"
               />
             </Link>
-            <Link
-              to="/menu"
-              data-ocid="hero.view_menu_button"
-              className="group inline-flex items-center gap-3 px-8 py-4 rounded-full text-sm font-semibold tracking-[0.2em] uppercase transition-all duration-300 hover:shadow-[0_0_30px_rgba(212,175,55,0.4)]"
-              style={{
-                border: "1.5px solid #d4af37",
-                color: "#d4af37",
-                background: "rgba(212,175,55,0.08)",
-                backdropFilter: "blur(4px)",
-              }}
-            >
-              Apskatīt piedāvājumu
-            </Link>
           </motion.div>
 
-          {/* Featured product card */}
+          {/* ── Featured product highlight ── */}
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.7 }}
-            className="mt-8"
+            transition={{ duration: 0.65, delay: 0.8 }}
+            className="w-full flex flex-col items-center"
           >
+            {/* Label */}
+            <p
+              className="text-[10px] font-semibold tracking-[0.4em] uppercase mb-4"
+              style={{ color: "#d4af37" }}
+            >
+              Populārākais komplekts
+            </p>
+
+            {/* Glass card */}
             <div
               data-ocid="hero.featured_product_card"
-              className="inline-flex items-center gap-4 px-5 py-3 rounded-2xl"
+              className="w-full max-w-[280px] rounded-2xl overflow-hidden"
               style={{
-                background: "rgba(27,20,18,0.85)",
+                background: "rgba(27,20,18,0.82)",
                 border: "1px solid rgba(212,175,55,0.3)",
-                backdropFilter: "blur(8px)",
+                backdropFilter: "blur(12px)",
               }}
             >
-              <Star
-                size={16}
-                fill="#d4af37"
-                style={{ color: "#d4af37", flexShrink: 0 }}
-              />
-              <div className="text-left">
-                <p
-                  className="text-xs font-medium tracking-widest uppercase"
-                  style={{ color: "#d4af37" }}
-                >
-                  Populārākais komplekts
-                </p>
+              {/* Product image */}
+              <div className="w-full" style={{ aspectRatio: "16/9" }}>
+                <img
+                  src="/assets/generated/sushi-roll-placeholder.dim_600x400.jpg"
+                  alt="SETE 04 — sushi komplekts"
+                  data-ocid="hero.featured_product_image"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              {/* Card body */}
+              <div className="px-5 py-4 flex flex-col gap-1">
+                {/* Product name */}
                 <p
                   className="text-sm font-semibold"
                   style={{ color: "#f5f5f5" }}
                 >
-                  SETE 04 · 48 gab · 45€
+                  SETE 04
                 </p>
+
+                {/* Piece count */}
+                <p
+                  className="text-xs"
+                  style={{ color: "rgba(212,175,55,0.75)" }}
+                >
+                  48 gab
+                </p>
+
+                {/* Price */}
+                <p
+                  className="text-xl font-semibold mt-1"
+                  style={{ color: "#d4af37" }}
+                >
+                  45€
+                </p>
+
+                {/* CTA button */}
+                <button
+                  type="button"
+                  onClick={handleOrderSete04}
+                  data-ocid="hero.featured_product.button"
+                  className="mt-3 w-full py-2.5 rounded-full text-xs font-bold tracking-[0.2em] uppercase transition-all hover:brightness-110 active:scale-95"
+                  style={{ background: "#d4af37", color: "#1b1412" }}
+                >
+                  PASŪTĪT
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={handleOrderSete04}
-                className="ml-2 px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase transition-all hover:brightness-110 active:scale-95"
-                style={{ background: "#d4af37", color: "#1b1412" }}
-              >
-                Pasūtīt
-              </button>
             </div>
           </motion.div>
         </div>
 
-        {/* Decorative bottom */}
+        {/* Bottom gradient fade into page background */}
         <div
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
-          style={{ color: "#7a6e5a" }}
-        >
-          <motion.div
-            animate={{ y: [0, 6, 0] }}
-            transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
-          >
-            <div
-              className="w-px h-12"
-              style={{
-                background: "linear-gradient(180deg, #d4af37, transparent)",
-              }}
-            />
-          </motion.div>
-        </div>
+          className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
+          style={{
+            background: "linear-gradient(0deg, #1b1412 0%, transparent 100%)",
+            zIndex: 2,
+          }}
+        />
       </section>
 
       {/* Feature Section */}

@@ -119,6 +119,29 @@
     box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
   }
 
+  /* Gold button pulse glow */
+  @keyframes gold-pulse {
+    0%, 100% { box-shadow: 0 0 18px rgba(212,175,55,0.25), 0 0 0px rgba(212,175,55,0); }
+    50%       { box-shadow: 0 0 28px rgba(212,175,55,0.45), 0 0 52px rgba(212,175,55,0.18); }
+  }
+
+  .hero-cta-btn {
+    box-shadow: 0 0 18px rgba(212,175,55,0.25);
+    animation: gold-pulse 3s ease-in-out infinite;
+    transition: box-shadow 0.3s ease, transform 0.15s ease;
+  }
+
+  .hero-cta-btn:hover {
+    animation: none;
+    box-shadow: 0 0 28px rgba(212,175,55,0.55), 0 0 60px rgba(212,175,55,0.22);
+    transform: translateY(-1px);
+  }
+
+  .hero-cta-btn:active {
+    transform: scale(0.96);
+    box-shadow: 0 0 14px rgba(212,175,55,0.3);
+  }
+
   /* Grain texture overlay for premium feel */
   .grain::after {
     content: '';
